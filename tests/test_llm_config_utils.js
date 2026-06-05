@@ -7,7 +7,7 @@ const {
   resolveChatModels,
   resolveSummaryLLM,
   inferProviderType,
-  getDeepSeekPreset,
+  getProviderPreset,
   inferChatApiProfile,
   resolveJsonResponseMode,
   isDeepSeekV4Model,
@@ -16,6 +16,9 @@ const {
   buildStreamingChatPayload,
   buildConnectivityTestPayload,
 } = require('../app/llm-config-utils.js');
+
+// alias for backward compatibility in tests
+const getDeepSeekPreset = (key) => getProviderPreset(key);
 
 function testNormalizeBaseUrlForStorage() {
   assert.equal(
@@ -104,7 +107,8 @@ function testGetDeepSeekPreset() {
       key: 'deepseek',
       label: 'DeepSeek 官方',
       baseUrl: 'https://api.deepseek.com',
-      models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+      defaultModel: 'deepseek/deepseek-v4-flash',
+      models: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'],
     },
   );
   assert.equal(getDeepSeekPreset('other-a'), null);
@@ -113,13 +117,42 @@ function testGetDeepSeekPreset() {
   assert.equal(getDeepSeekPreset('other-d'), null);
 }
 
+function testGetOpenCodePreset() {
+  const preset = getProviderPreset('opencode');
+  assert.equal(preset.key, 'opencode');
+  assert.equal(preset.label, 'OpenCode');
+  assert.equal(preset.baseUrl, 'https://opencode.ai/zen/v1');
+  assert.equal(preset.defaultModel, 'mimo-v2.5-free');
+  assert.ok(preset.models.length > 0);
+  assert.ok(preset.models.includes('mimo-v2.5-free'));
+}
+
+function testGetCustomPreset() {
+  const preset = getProviderPreset('custom');
+  assert.equal(preset.key, 'custom');
+  assert.equal(preset.label, '自定义 LLM');
+  assert.equal(preset.baseUrl, '');
+  assert.equal(preset.defaultModel, '');
+  assert.deepEqual(preset.models, []);
+}
+
 function testInferChatApiProfile() {
   assert.equal(
     inferChatApiProfile('https://api.deepseek.com', 'deepseek-v4-flash'),
     'deepseek',
   );
-  assert.equal(inferChatApiProfile('https://example.com/v1', 'other-model'), 'unsupported');
-  assert.equal(inferChatApiProfile('https://example.com/v1', 'other-model'), 'unsupported');
+  assert.equal(
+    inferChatApiProfile('https://opencode.ai/zen/v1', 'mimo-v2.5-free'),
+    'opencode',
+  );
+  assert.equal(
+    inferChatApiProfile('https://example.com/v1', 'other-model'),
+    'custom',
+  );
+  assert.equal(
+    inferChatApiProfile('', ''),
+    'unsupported',
+  );
 }
 
 function testResolveJsonResponseMode() {
@@ -256,6 +289,8 @@ testSanitizeModelList();
 testResolveChatModelsAndSummary();
 testInferProviderType();
 testGetDeepSeekPreset();
+testGetOpenCodePreset();
+testGetCustomPreset();
 testInferChatApiProfile();
 testResolveJsonResponseMode();
 testResolveMaxOutputTokens();

@@ -9,16 +9,40 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   const DEFAULT_DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
   const DEFAULT_DEEPSEEK_CHAT_MODELS = [
-    'deepseek-v4-flash',
-    'deepseek-v4-pro',
+    'deepseek/deepseek-v4-flash',
+    'deepseek/deepseek-v4-pro',
   ];
+  const DEFAULT_OPENCODE_BASE_URL = 'https://opencode.ai/zen/v1';
+  const DEFAULT_OPENCODE_CHAT_MODELS = [
+    'mimo-v2.5-free',
+    'nemotron-3-ultra-free',
+    'deepseek-v4-flash-free',
+    'qwen3.6-plus-free',
+  ];
+  const OPENCODE_MODEL_PREFIX = 'opencode/';
+  const DEFAULT_CUSTOM_CHAT_MODELS = [];
   const DEEPSEEK_V4_MAX_OUTPUT_TOKENS = 393216;
   const DEEPSEEK_PRESETS = Object.freeze({
     deepseek: Object.freeze({
       key: 'deepseek',
       label: 'DeepSeek 官方',
-      baseUrl: 'https://api.deepseek.com',
-      models: Object.freeze(['deepseek-v4-flash', 'deepseek-v4-pro']),
+      baseUrl: DEFAULT_DEEPSEEK_BASE_URL,
+      defaultModel: 'deepseek/deepseek-v4-flash',
+      models: Object.freeze(DEFAULT_DEEPSEEK_CHAT_MODELS),
+    }),
+    opencode: Object.freeze({
+      key: 'opencode',
+      label: 'OpenCode',
+      baseUrl: DEFAULT_OPENCODE_BASE_URL,
+      defaultModel: 'mimo-v2.5-free',
+      models: Object.freeze(DEFAULT_OPENCODE_CHAT_MODELS),
+    }),
+    custom: Object.freeze({
+      key: 'custom',
+      label: '自定义 LLM',
+      baseUrl: '',
+      defaultModel: '',
+      models: Object.freeze(DEFAULT_CUSTOM_CHAT_MODELS),
     }),
   });
 
@@ -113,8 +137,8 @@
     const safeSecret = secret && typeof secret === 'object' ? secret : {};
     const llmProvider = safeSecret.llmProvider || {};
     const explicit = normalizeText(llmProvider.type || llmProvider.provider || '').toLowerCase();
-    if (explicit === 'deepseek') {
-      return 'deepseek';
+    if (explicit === 'deepseek' || explicit === 'opencode' || explicit === 'custom') {
+      return explicit;
     }
     return 'deepseek';
   };
@@ -140,6 +164,12 @@
     if (normalizedModel.startsWith('deepseek-')) {
       return 'deepseek';
     }
+    if (/opencode/i.test(normalizedBaseUrl) || normalizedModel.startsWith('opencode/')) {
+      return 'opencode';
+    }
+    if (normalizedBaseUrl && normalizedModel) {
+      return 'custom';
+    }
     return 'unsupported';
   };
 
@@ -149,7 +179,18 @@
 
   const isDeepSeekV4Model = (model) => {
     const normalizedModel = normalizeText(model || '').toLowerCase();
-    return normalizedModel === 'deepseek-v4-flash' || normalizedModel === 'deepseek-v4-pro';
+    const stripped = normalizedModel.replace(/^deepseek\//, '');
+    return stripped === 'deepseek-v4-flash' || stripped === 'deepseek-v4-pro';
+  };
+
+  const isLargeOutputModel = ({ baseUrl, model } = {}) => {
+    if (!model) return false;
+    const profile = inferChatApiProfile(baseUrl, model);
+    if (profile === 'deepseek' && isDeepSeekV4Model(model)) return true;
+    const normalizedModel = normalizeText(model || '').toLowerCase();
+    if (normalizedModel.includes('claude-sonnet-4')) return true;
+    if (normalizedModel.includes('gpt-4o')) return true;
+    return false;
   };
 
   const resolveMaxOutputTokens = ({ baseUrl, model } = {}) => {
@@ -196,10 +237,21 @@
     };
   };
 
+  const buildOpencodeFullModel = (model) => {
+    const m = normalizeText(model || '');
+    if (!m) return '';
+    if (m.startsWith('opencode/')) return m;
+    return `opencode/${m}`;
+  };
+
   return {
     DEFAULT_DEEPSEEK_BASE_URL,
     DEFAULT_DEEPSEEK_CHAT_MODELS,
-    DEEPSEEK_PRESETS,
+    DEFAULT_OPENCODE_BASE_URL,
+    DEFAULT_OPENCODE_CHAT_MODELS,
+    PROVIDER_PRESETS,
+    OPENCODE_MODEL_PREFIX,
+    buildOpencodeFullModel,
     normalizeText,
     normalizeBaseUrlForStorage,
     buildChatCompletionsEndpoint,

@@ -37,6 +37,9 @@ GLOBAL_TOKENS = {
 GLOBAL_TIME_SECONDS: float = 0.0
 
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com"
+DEFAULT_OPENCODE_BASE_URL = "https://opencode.ai/zen/v1"
+DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 
 
 def reset_global_tokens():
@@ -149,11 +152,15 @@ class LLMClient:
             model = str(self.model or '').strip().lower()
             if 'deepseek' in url:
                 return 'deepseek'
-            if model.startswith('deepseek-'):
-                return 'deepseek'
+            if 'opencode' in url or 'opencode' in model:
+                return 'opencode'
+            if 'openai' in url or model.startswith(('gpt-', 'o1', 'o3')):
+                return 'openai'
+            if 'anthropic' in url or model.startswith('claude'):
+                return 'anthropic'
         except Exception:
             pass
-        return 'llm'
+        return 'custom'
 
     @staticmethod
     def _is_authentication_error(exc: Exception) -> bool:
@@ -778,6 +785,78 @@ class DeepSeekClient(LLMClient):
         super().__init__(api_key=api_key, model=model, base_url=base_url)
 
 
+class OpenAIClient(LLMClient):
+    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_OPENAI_BASE_URL):
+        super().__init__(api_key=api_key, model=model, base_url=base_url)
+
+
+class OpenCodeClient(LLMClient):
+    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_OPENCODE_BASE_URL):
+        super().__init__(api_key=api_key, model=model, base_url=base_url)
+
+
+class AnthropicClient(LLMClient):
+    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_ANTHROPIC_BASE_URL):
+        super().__init__(api_key=api_key, model=model, base_url=base_url)
+
+
+class CustomClient(LLMClient):
+    def __init__(self, api_key: str, model: str, base_url: str = ''):
+        super().__init__(api_key=api_key, model=model, base_url=base_url)
+
+
+class FallbackLLMClient:
+    def __init__(self, primary: LLMClient, fallback: LLMClient):
+        self.primary = primary
+        self.fallback = fallback
+
+    @property
+    def model(self) -> str:
+        return self.primary.model
+
+    @property
+    def kwargs(self) -> Dict[str, Any]:
+        return self.primary.kwargs
+
+    @kwargs.setter
+    def kwargs(self, value: Dict[str, Any]) -> None:
+        self.primary.kwargs = value
+
+    def chat(self, messages: List[Dict[str, str]], response_format: Optional[Dict[str, Any]] = None) -> dict:
+        try:
+            return self.primary.chat(messages, response_format)
+        except Exception as e:
+            if isinstance(e, requests.exceptions.HTTPError) and LLMClient._is_authentication_error(e):
+                raise
+            print(f"[INFO] 主 LLM ({self.primary.model}) 请求失败，回退到 {self.fallback.model}：{e}")
+            return self.fallback.chat(messages, response_format)
+
+    def chat_structured(
+        self,
+        messages: List[Dict[str, str]],
+        schema_name: str,
+        schema: Dict[str, Any],
+        *,
+        strict: bool = True,
+        allow_json_object_fallback: bool = True,
+    ) -> Dict[str, Any]:
+        try:
+            return self.primary.chat_structured(
+                messages, schema_name, schema,
+                strict=strict,
+                allow_json_object_fallback=allow_json_object_fallback,
+            )
+        except Exception as e:
+            if isinstance(e, requests.exceptions.HTTPError) and LLMClient._is_authentication_error(e):
+                raise
+            print(f"[INFO] 主 LLM ({self.primary.model}) 结构化请求失败，回退到 {self.fallback.model}：{e}")
+            return self.fallback.chat_structured(
+                messages, schema_name, schema,
+                strict=strict,
+                allow_json_object_fallback=allow_json_object_fallback,
+            )
+
+
 def parse_provider_model(model_str: str) -> Tuple[str, str]:
     """
     解析模型字符串为 (provider, model)。
@@ -793,6 +872,88 @@ def parse_provider_model(model_str: str) -> Tuple[str, str]:
 
 
 class ClientFactory:
+    @staticmethod
+    def _read_config_default_model() -> str:
+        try:
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            cfg_path = os.path.join(project_root, 'config.yaml')
+            if os.path.exists(cfg_path):
+                with open(cfg_path, 'r', encoding='utf-8') as fh:
+                    lines = fh.readlines()
+                llm_section = False
+                for ln in lines:
+                    s = ln.strip()
+                    if not llm_section and s.startswith('llm:'):
+                        llm_section = True
+                        continue
+                    if llm_section:
+                        if s.startswith('default_model:'):
+                            _, val = s.split(':', 1)
+                            return val.strip()
+                        if s and not s.startswith('#') and not s.startswith(' '):
+                            break
+        except Exception:
+            pass
+        return ''
+
+    @staticmethod
+    def _create_client(model_str: str) -> LLMClient:
+        provider, model = parse_provider_model(model_str)
+        api_key = (os.getenv('LLM_API_KEY') or '').strip() or None
+        base_url = (os.getenv('LLM_BASE_URL') or '').strip() or None
+
+        provider = provider.lower()
+        if provider == 'deepseek':
+            base_url = base_url or DEFAULT_DEEPSEEK_BASE_URL
+            return DeepSeekClient(
+                api_key=api_key or os.getenv('DEEPSEEK_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+        if provider == 'openai':
+            base_url = base_url or DEFAULT_OPENAI_BASE_URL
+            return OpenAIClient(
+                api_key=api_key or os.getenv('OPENAI_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+        if provider == 'opencode':
+            base_url = base_url or DEFAULT_OPENCODE_BASE_URL
+            return OpenCodeClient(
+                api_key=api_key or os.getenv('OPENCODE_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+        if provider in ('anthropic', 'claude'):
+            base_url = base_url or DEFAULT_ANTHROPIC_BASE_URL
+            return AnthropicClient(
+                api_key=api_key or os.getenv('ANTHROPIC_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+        if provider == 'custom':
+            if not base_url:
+                raise ValueError(
+                    "自定义 LLM 需要设置 LLM_BASE_URL 环境变量指向兼容的 Chat Completions 端点。"
+                )
+            return CustomClient(
+                api_key=api_key or os.getenv('CUSTOM_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+
+        if base_url:
+            return LLMClient(
+                api_key=api_key or os.getenv('LLM_API_KEY', ''),
+                model=model,
+                base_url=base_url,
+            )
+
+        raise ValueError(
+            f"不支持的 provider={provider}，当前支持: deepseek, openai, opencode, anthropic, custom。"
+            "若使用其他 self-hosted LLM，请设置 LLM_BASE_URL 环境变量指向兼容的 Chat Completions 端点。"
+        )
+
     @staticmethod
     def from_env():
         """
