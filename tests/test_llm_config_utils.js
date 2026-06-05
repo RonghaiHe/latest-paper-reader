@@ -117,14 +117,14 @@ function testGetDeepSeekPreset() {
   assert.equal(getDeepSeekPreset('other-d'), null);
 }
 
-function testGetOpenCodePreset() {
-  const preset = getProviderPreset('opencode');
-  assert.equal(preset.key, 'opencode');
-  assert.equal(preset.label, 'OpenCode');
-  assert.equal(preset.baseUrl, 'https://opencode.ai/zen/v1');
-  assert.equal(preset.defaultModel, 'mimo-v2.5-free');
+function testGetGlmPreset() {
+  const preset = getProviderPreset('glm');
+  assert.equal(preset.key, 'glm');
+  assert.equal(preset.label, 'GLM 智谱');
+  assert.equal(preset.baseUrl, 'https://open.bigmodel.cn/api/paas/v4');
+  assert.equal(preset.defaultModel, 'glm-4.7-flash');
   assert.ok(preset.models.length > 0);
-  assert.ok(preset.models.includes('mimo-v2.5-free'));
+  assert.ok(preset.models.includes('glm-4.7-flash'));
 }
 
 function testGetCustomPreset() {
@@ -142,8 +142,8 @@ function testInferChatApiProfile() {
     'deepseek',
   );
   assert.equal(
-    inferChatApiProfile('https://opencode.ai/zen/v1', 'mimo-v2.5-free'),
-    'opencode',
+    inferChatApiProfile('https://open.bigmodel.cn/api/paas/v4', 'glm-4.7-flash'),
+    'glm',
   );
   assert.equal(
     inferChatApiProfile('https://example.com/v1', 'other-model'),
@@ -289,7 +289,7 @@ testSanitizeModelList();
 testResolveChatModelsAndSummary();
 testInferProviderType();
 testGetDeepSeekPreset();
-testGetOpenCodePreset();
+testGetGlmPreset();
 testGetCustomPreset();
 testInferChatApiProfile();
 testResolveJsonResponseMode();

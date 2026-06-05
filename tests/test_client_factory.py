@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from llm import (
     ClientFactory,
     DeepSeekClient,
-    OpenCodeClient,
+    GlmClient,
     CustomClient,
     FallbackLLMClient,
     LLMClient,
@@ -49,12 +49,12 @@ class ClientFactoryTest(unittest.TestCase):
         self.assertEqual(client.model, "deepseek-v4-flash")
         self.assertEqual(client.api_key, "sk-test")
 
-    @patch.dict("llm.os.environ", {"LLM_MODEL": "opencode/mimo-v2.5-free", "OPENCODE_API_KEY": "oc-test"})
-    def test_from_env_opencode(self):
+    @patch.dict("llm.os.environ", {"LLM_MODEL": "glm/glm-4.7-flash", "GLM_API_KEY": "glm-test"})
+    def test_from_env_glm(self):
         client = ClientFactory.from_env()
-        self.assertIsInstance(client, OpenCodeClient)
-        self.assertEqual(client.model, "mimo-v2.5-free")
-        self.assertEqual(client.api_key, "oc-test")
+        self.assertIsInstance(client, GlmClient)
+        self.assertEqual(client.model, "glm-4.7-flash")
+        self.assertEqual(client.api_key, "glm-test")
 
     @patch.dict("llm.os.environ", {"LLM_MODEL": "custom/my-model", "CUSTOM_API_KEY": "custom-test", "LLM_BASE_URL": "https://my-proxy.example.com/v1"})
     def test_from_env_custom(self):
@@ -85,15 +85,15 @@ class ClientFactoryTest(unittest.TestCase):
 
     @patch.dict("llm.os.environ", {
         "LLM_MODEL": "deepseek/deepseek-v4-flash",
-        "LLM_FALLBACK_MODEL": "opencode/mimo-v2.5-free",
+        "LLM_FALLBACK_MODEL": "glm/glm-4.7-flash",
         "DEEPSEEK_API_KEY": "sk-test",
-        "OPENCODE_API_KEY": "oc-test",
+        "GLM_API_KEY": "glm-test",
     })
     def test_from_env_with_fallback(self):
         client = ClientFactory.from_env()
         self.assertIsInstance(client, FallbackLLMClient)
         self.assertIsInstance(client.primary, DeepSeekClient)
-        self.assertIsInstance(client.fallback, OpenCodeClient)
+        self.assertIsInstance(client.fallback, GlmClient)
         self.assertEqual(client.model, "deepseek-v4-flash")
 
     @patch.dict("llm.os.environ", {"LLM_API_KEY": "universal-key", "LLM_MODEL": "deepseek/deepseek-v4-flash"})

@@ -38,7 +38,7 @@ GLOBAL_TIME_SECONDS: float = 0.0
 
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com"
-DEFAULT_OPENCODE_BASE_URL = "https://opencode.ai/zen/v1"
+DEFAULT_GLM_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
 DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 
 
@@ -152,8 +152,8 @@ class LLMClient:
             model = str(self.model or '').strip().lower()
             if 'deepseek' in url:
                 return 'deepseek'
-            if 'opencode' in url or 'opencode' in model:
-                return 'opencode'
+            if 'bigmodel.cn' in url or model.startswith('glm'):
+                return 'glm'
             if 'openai' in url or model.startswith(('gpt-', 'o1', 'o3')):
                 return 'openai'
             if 'anthropic' in url or model.startswith('claude'):
@@ -790,8 +790,8 @@ class OpenAIClient(LLMClient):
         super().__init__(api_key=api_key, model=model, base_url=base_url)
 
 
-class OpenCodeClient(LLMClient):
-    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_OPENCODE_BASE_URL):
+class GlmClient(LLMClient):
+    def __init__(self, api_key: str, model: str, base_url: str = DEFAULT_GLM_BASE_URL):
         super().__init__(api_key=api_key, model=model, base_url=base_url)
 
 
@@ -917,10 +917,10 @@ class ClientFactory:
                 model=model,
                 base_url=base_url,
             )
-        if provider == 'opencode':
-            base_url = base_url or DEFAULT_OPENCODE_BASE_URL
-            return OpenCodeClient(
-                api_key=api_key or os.getenv('OPENCODE_API_KEY', ''),
+        if provider == 'glm':
+            base_url = base_url or DEFAULT_GLM_BASE_URL
+            return GlmClient(
+                api_key=api_key or os.getenv('GLM_API_KEY', ''),
                 model=model,
                 base_url=base_url,
             )
@@ -950,7 +950,7 @@ class ClientFactory:
             )
 
         raise ValueError(
-            f"不支持的 provider={provider}，当前支持: deepseek, openai, opencode, anthropic, custom。"
+            f"不支持的 provider={provider}，当前支持: deepseek, openai, glm, anthropic, custom。"
             "若使用其他 self-hosted LLM，请设置 LLM_BASE_URL 环境变量指向兼容的 Chat Completions 端点。"
         )
 

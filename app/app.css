@@ -6631,3 +6631,129 @@ body.dpr-paper-page.dpr-pdf-preview-open article.markdown-section {
     transition: none !important;
   }
 }
+
+/* === 自定义 LLM Chip（设置页） === */
+.custom-llm-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-height: 28px;
+}
+.custom-llm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 14px;
+  background: #e8f4fd;
+  border: 1px solid #b8daf0;
+  font-size: 12px;
+  cursor: default;
+  position: relative;
+  transition: box-shadow 0.15s;
+}
+.custom-llm-chip:hover {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.custom-llm-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #5b9bd5;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.custom-llm-chip-label {
+  color: #2c3e50;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-llm-chip-del {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.custom-llm-chip:hover .custom-llm-chip-del {
+  display: block;
+}
+.custom-llm-chip-del:hover {
+  background: #c0392b;
+  transform: scale(1.15);
+}
+
+/* === Chat 页头部 LLM 图标行 === */
+.chat-llm-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+.chat-llm-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ecf0f1;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.chat-llm-icon:hover {
+  border-color: #5b9bd5;
+  background: #d6eaf8;
+}
+.chat-llm-icon.is-active {
+  border-color: #2980b9;
+  background: #5b9bd5;
+  color: #fff;
+}
+.chat-llm-icon-del {
+  display: none;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 9px;
+  line-height: 14px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.chat-llm-icon:hover .chat-llm-icon-del {
+  display: block;
+}
+.chat-llm-icon-del:hover {
+  background: #c0392b;
+  transform: scale(1.2);
+}

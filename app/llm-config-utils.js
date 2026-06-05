@@ -12,14 +12,14 @@
     'deepseek/deepseek-v4-flash',
     'deepseek/deepseek-v4-pro',
   ];
-  const DEFAULT_OPENCODE_BASE_URL = 'https://opencode.ai/zen/v1';
-  const DEFAULT_OPENCODE_CHAT_MODELS = [
-    'mimo-v2.5-free',
-    'nemotron-3-ultra-free',
-    'deepseek-v4-flash-free',
-    'qwen3.6-plus-free',
+  const DEFAULT_GLM_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4';
+  const DEFAULT_GLM_CHAT_MODELS = [
+    'glm-4.7-flash',
+    'glm-4-plus',
+    'glm-4-air',
+    'glm-4-long',
   ];
-  const OPENCODE_MODEL_PREFIX = 'opencode/';
+  const GLM_MODEL_PREFIX = 'glm/';
   const DEFAULT_CUSTOM_CHAT_MODELS = [];
   const DEEPSEEK_V4_MAX_OUTPUT_TOKENS = 393216;
   const DEEPSEEK_PRESETS = Object.freeze({
@@ -30,12 +30,12 @@
       defaultModel: 'deepseek/deepseek-v4-flash',
       models: Object.freeze(DEFAULT_DEEPSEEK_CHAT_MODELS),
     }),
-    opencode: Object.freeze({
-      key: 'opencode',
-      label: 'OpenCode',
-      baseUrl: DEFAULT_OPENCODE_BASE_URL,
-      defaultModel: 'mimo-v2.5-free',
-      models: Object.freeze(DEFAULT_OPENCODE_CHAT_MODELS),
+    glm: Object.freeze({
+      key: 'glm',
+      label: 'GLM 智谱',
+      baseUrl: DEFAULT_GLM_BASE_URL,
+      defaultModel: 'glm-4.7-flash',
+      models: Object.freeze(DEFAULT_GLM_CHAT_MODELS),
     }),
     custom: Object.freeze({
       key: 'custom',
@@ -137,7 +137,7 @@
     const safeSecret = secret && typeof secret === 'object' ? secret : {};
     const llmProvider = safeSecret.llmProvider || {};
     const explicit = normalizeText(llmProvider.type || llmProvider.provider || '').toLowerCase();
-    if (explicit === 'deepseek' || explicit === 'opencode' || explicit === 'custom') {
+    if (explicit === 'deepseek' || explicit === 'glm' || explicit === 'custom') {
       return explicit;
     }
     return 'deepseek';
@@ -164,8 +164,8 @@
     if (normalizedModel.startsWith('deepseek-')) {
       return 'deepseek';
     }
-    if (/opencode/i.test(normalizedBaseUrl) || normalizedModel.startsWith('opencode/')) {
-      return 'opencode';
+    if (/bigmodel\.cn/i.test(normalizedBaseUrl) || normalizedModel.startsWith('glm/')) {
+      return 'glm';
     }
     if (normalizedBaseUrl && normalizedModel) {
       return 'custom';
@@ -237,21 +237,21 @@
     };
   };
 
-  const buildOpencodeFullModel = (model) => {
+  const buildGlmFullModel = (model) => {
     const m = normalizeText(model || '');
     if (!m) return '';
-    if (m.startsWith('opencode/')) return m;
-    return `opencode/${m}`;
+    if (m.startsWith('glm/')) return m;
+    return `glm/${m}`;
   };
 
   return {
     DEFAULT_DEEPSEEK_BASE_URL,
     DEFAULT_DEEPSEEK_CHAT_MODELS,
-    DEFAULT_OPENCODE_BASE_URL,
-    DEFAULT_OPENCODE_CHAT_MODELS,
+    DEFAULT_GLM_BASE_URL,
+    DEFAULT_GLM_CHAT_MODELS,
     PROVIDER_PRESETS,
-    OPENCODE_MODEL_PREFIX,
-    buildOpencodeFullModel,
+    GLM_MODEL_PREFIX,
+    buildGlmFullModel,
     normalizeText,
     normalizeBaseUrlForStorage,
     buildChatCompletionsEndpoint,

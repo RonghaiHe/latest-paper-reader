@@ -685,7 +685,7 @@
       const secretNameLlmModel = 'LLM_MODEL';
       const secretNameLlmApiKey = 'LLM_API_KEY';
       const secretNameLlmBaseUrl = 'LLM_BASE_URL';
-      const secretNameOpencodeKey = 'OPENCODE_API_KEY';
+      const secretNameGlmKey = 'GLM_API_KEY';
       const secretNameCustomKey = 'CUSTOM_API_KEY';
       const secretNameSkipRerank = 'DPR_SKIP_RERANK';
       const secretNameLocalRerankModel = 'LOCAL_RERANK_MODEL';
@@ -737,7 +737,7 @@
         { name: secretNameDeepSeekModel, value: summarizedModel },
         { name: secretNameLlmPrimaryBase, value: summarizedBaseUrl },
         { name: secretNameSkipRerank, value: skipRerank ? 'true' : 'false' },
-        ...(providerType === 'opencode' ? [{ name: secretNameOpencodeKey, value: summarizedApiKey }] : []),
+        ...(providerType === 'glm' ? [{ name: secretNameGlmKey, value: summarizedApiKey }] : []),
         ...(providerType === 'custom' ? [{ name: secretNameCustomKey, value: summarizedApiKey }] : []),
         { name: secretNameLocalRerankModel, value: localRerankModel },
         { name: secretNameRerankProfile, value: rerankerProfile },
@@ -1131,7 +1131,7 @@
       const currentProviderType = inferProviderType(currentSecret) || 'deepseek';
       const llmUtils = getLLMUtils();
       const deepseekPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('deepseek') : { defaultModel: 'deepseek/deepseek-v4-flash', models: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'] };
-      const opencodePreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('opencode') : { defaultModel: 'opencode/mimo-v2.5-free', models: ['opencode/mimo-v2.5-free', 'opencode/nemotron-3-ultra-free', 'opencode/deepseek-v4-flash-free', 'opencode/qwen3.6-plus-free'] };
+      const glmPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('glm') : { defaultModel: 'glm-4.7-flash', models: ['glm-4.7-flash', 'glm-4-plus', 'glm-4-air', 'glm-4-long'] };
       const customPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('custom') : { defaultModel: '', models: [] };
       const initialDeepSeekModel = normalizeText(currentSummaryLLM.model || '') || deepseekPreset.defaultModel;
       const deepseekSummaryModels = (deepseekPreset.models || []).map((model) => ({
@@ -1142,17 +1142,35 @@
             ? 'DeepSeek V4 Pro · 高性能模型'
             : model,
       }));
-      const opencodeModels = (opencodePreset.models || []).map((model) => ({
+      const glmModels = (glmPreset.models || []).map((model) => ({
         value: model,
-        label: model === opencodePreset.defaultModel
+        label: model === glmPreset.defaultModel
           ? `${model} · 默认推荐`
           : model,
       }));
-      const initialOpenCodeApiKey = normalizeText(currentSecret.opencode && currentSecret.opencode.apiKey || '');
-      const initialOpenCodeModel = normalizeText(currentSecret.opencode && currentSecret.opencode.model || '') || opencodePreset.defaultModel;
+      const initialGlmApiKey = normalizeText(currentSecret.glm && currentSecret.glm.apiKey || '');
+      const initialGlmModel = normalizeText(currentSecret.glm && currentSecret.glm.model || '') || glmPreset.defaultModel;
       const initialCustomApiKey = normalizeText(currentSecret.custom && currentSecret.custom.apiKey || '');
       const initialCustomBaseUrl = normalizeBaseUrlForStorage(currentSecret.custom && currentSecret.custom.baseUrl || '');
       const initialCustomModel = normalizeText(currentSecret.custom && currentSecret.custom.model || '');
+
+      // 从 chatLLMs 恢复自定义 LLM 列表（兼容存储有多个自定义 LLM 的情况）
+      const initialCustomLlms = [];
+      const chatLlmsFromSecret = Array.isArray(currentSecret.chatLLMs) ? currentSecret.chatLLMs : [];
+      const knownProviderKeys = [];
+      if (initialApiKey && initialDeepSeekModel) knownProviderKeys.push(initialApiKey + '\u0000' + deepseekPreset.baseUrl);
+      if (initialGlmApiKey && initialGlmModel) knownProviderKeys.push(initialGlmApiKey + '\u0000' + glmPreset.baseUrl);
+      chatLlmsFromSecret.forEach((entry) => {
+        if (!entry || !entry.apiKey || !entry.baseUrl) return;
+        const pk = entry.apiKey + '\u0000' + entry.baseUrl;
+        if (knownProviderKeys.includes(pk)) return;
+        const models = Array.isArray(entry.models) ? entry.models : [];
+        models.forEach((m) => {
+          if (m && !initialCustomLlms.some((e) => e.model === m && e.baseUrl === entry.baseUrl)) {
+            initialCustomLlms.push({ apiKey: entry.apiKey, baseUrl: entry.baseUrl, model: m });
+          }
+        });
+      });
 
       modal.innerHTML = `
         <h2 style="margin-top:0;">🛡️ 新配置指引 · 第二步</h2>
@@ -1188,8 +1206,8 @@
                   DeepSeek 官方
                 </label>
                 <label>
-                  <input type="radio" name="secret-setup-provider" value="opencode" />
-                  OpenCode
+                  <input type="radio" name="secret-setup-provider" value="glm" />
+                  GLM 智谱
                 </label>
                 <label>
                   <input type="radio" name="secret-setup-provider" value="custom" />
@@ -1236,34 +1254,34 @@
               </div>
             </div>
 
-            <div id="secret-setup-opencode-section" class="secret-setup-step2-block" style="display:none;">
-              <div class="secret-setup-step2-title">OpenCode API（必填）</div>
+            <div id="secret-setup-glm-section" class="secret-setup-step2-block" style="display:none;">
+              <div class="secret-setup-step2-title">GLM 智谱 API（必填）</div>
               <p class="secret-setup-step2-note">
-                OpenCode 提供多个免费 LLM 模型的统一接口；用于 query enrich、LLM refine、总结与聊天。
+                GLM 智谱提供多个大语言模型接口；用于 query enrich、LLM refine、总结与聊天。
               </p>
               <div class="secret-setup-input-row multi-actions">
                 <input
-                  id="secret-setup-opencode"
+                  id="secret-setup-glm"
                   type="password"
                   autocomplete="off"
-                  placeholder="OpenCode API Key"
+                  placeholder="GLM API Key"
                   style="width:100%; box-sizing:border-box; padding:6px 8px; font-size:13px;"
                 />
-                <button id="secret-setup-opencode-test" type="button" class="secret-gate-btn secondary">
+                <button id="secret-setup-glm-test" type="button" class="secret-gate-btn secondary">
                   测试
                 </button>
               </div>
-              <div id="secret-setup-opencode-status" style="min-height:18px; font-size:12px; color:#999; margin-bottom:8px;">
-                将通过一次 <code>hello world</code> 请求检查 OpenCode 配置可用性。
+              <div id="secret-setup-glm-status" style="min-height:18px; font-size:12px; color:#999; margin-bottom:8px;">
+                将通过一次 <code>hello world</code> 请求检查 GLM 配置可用性。
               </div>
 
               <div style="font-weight:500; margin-bottom:4px;">
                 选择模型
               </div>
               <div style="font-size:13px;">
-                <select id="secret-setup-opencode-model-select" class="secret-setup-select" style="margin-bottom:6px;"></select>
+                <select id="secret-setup-glm-model-select" class="secret-setup-select" style="margin-bottom:6px;"></select>
                 <input
-                  id="secret-setup-opencode-custom-model"
+                  id="secret-setup-glm-custom-model"
                   type="text"
                   autocomplete="off"
                   placeholder="或输入自定义模型名称（可选）"
@@ -1273,46 +1291,47 @@
             </div>
 
             <div id="secret-setup-custom-section" class="secret-setup-step2-block" style="display:none;">
-              <div class="secret-setup-step2-title">自定义 LLM（兼容 OpenAI 格式，必填）</div>
+              <div class="secret-setup-step2-title">自定义 LLM（兼容 OpenAI 格式）</div>
               <p class="secret-setup-step2-note">
-                输入兼容 OpenAI Chat Completions 格式的 API 地址、密钥和模型名称；用于 query enrich、LLM refine、总结与聊天。
+                可添加多个自定义 LLM，用于 query enrich、LLM refine、总结与聊天。每个 LLM 需要 base URL、API Key 和模型名称。
               </p>
+              <div id="secret-setup-custom-llm-list" class="custom-llm-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;min-height:28px;"></div>
+
               <div class="secret-setup-input-row" style="margin-bottom:6px;">
                 <input
                   id="secret-setup-custom-base-url"
                   type="text"
                   autocomplete="off"
-                  placeholder="Base URL，例如 https://my-proxy.example.com/v1"
+                  placeholder="Base URL，例如 https://open.bigmodel.cn/api/paas/v4"
                   style="width:100%; box-sizing:border-box; padding:6px 8px; font-size:13px;"
                 />
               </div>
-              <div class="secret-setup-input-row multi-actions">
+              <div class="secret-setup-input-row" style="margin-bottom:6px;">
                 <input
-                  id="secret-setup-custom"
+                  id="secret-setup-custom-api-key"
                   type="password"
                   autocomplete="off"
                   placeholder="API Key"
-                  style="width:100%; box-sizing:border-box; padding:6px 8px; font-size:13px;"
+                  style="flex:1; box-sizing:border-box; padding:6px 8px; font-size:13px;"
                 />
-                <button id="secret-setup-custom-test" type="button" class="secret-gate-btn secondary">
-                  测试
-                </button>
               </div>
-              <div id="secret-setup-custom-status" style="min-height:18px; font-size:12px; color:#999; margin-bottom:8px;">
-                将通过一次 <code>hello world</code> 请求检查自定义 LLM 配置可用性。
-              </div>
-
-              <div style="font-weight:500; margin-bottom:4px;">
-                模型名称
-              </div>
-              <div style="font-size:13px;">
+              <div class="secret-setup-input-row" style="margin-bottom:6px;">
                 <input
                   id="secret-setup-custom-model"
                   type="text"
                   autocomplete="off"
-                  placeholder="例如 gpt-4o-mini、my-model"
-                  style="width:100%; box-sizing:border-box; padding:6px 8px; font-size:13px;"
+                  placeholder="模型名称，例如 glm-4.7-flash"
+                  style="flex:1; box-sizing:border-box; padding:6px 8px; font-size:13px;"
                 />
+                <button id="secret-setup-custom-add-btn" type="button" class="secret-gate-btn secondary">
+                  添加
+                </button>
+                <button id="secret-setup-custom-test" type="button" class="secret-gate-btn secondary">
+                  测试所选
+                </button>
+              </div>
+              <div id="secret-setup-custom-status" style="min-height:18px; font-size:12px; color:#999; margin-bottom:8px;">
+                填写后点击"添加"加入列表，支持多个自定义 LLM。
               </div>
             </div>
           </div>
@@ -1394,14 +1413,16 @@
       const deepseekTestBtn = document.getElementById('secret-setup-deepseek-test');
       const deepseekStatusEl = document.getElementById('secret-setup-deepseek-status');
       const deepseekModelSelect = document.getElementById('secret-setup-deepseek-model-select');
-      const opencodeSection = document.getElementById('secret-setup-opencode-section');
-      const opencodeInput = document.getElementById('secret-setup-opencode');
-      const opencodeTestBtn = document.getElementById('secret-setup-opencode-test');
-      const opencodeStatusEl = document.getElementById('secret-setup-opencode-status');
-      const opencodeModelSelect = document.getElementById('secret-setup-opencode-model-select');
-      const opencodeCustomModelInput = document.getElementById('secret-setup-opencode-custom-model');
+      const glmSection = document.getElementById('secret-setup-glm-section');
+      const glmInput = document.getElementById('secret-setup-glm');
+      const glmTestBtn = document.getElementById('secret-setup-glm-test');
+      const glmStatusEl = document.getElementById('secret-setup-glm-status');
+      const glmModelSelect = document.getElementById('secret-setup-glm-model-select');
+      const glmCustomModelInput = document.getElementById('secret-setup-glm-custom-model');
       const customSection = document.getElementById('secret-setup-custom-section');
-      const customInput = document.getElementById('secret-setup-custom');
+      const customLlmList = document.getElementById('secret-setup-custom-llm-list');
+      const customApiKeyInput = document.getElementById('secret-setup-custom-api-key');
+      const customAddBtn = document.getElementById('secret-setup-custom-add-btn');
       const customTestBtn = document.getElementById('secret-setup-custom-test');
       const customStatusEl = document.getElementById('secret-setup-custom-status');
       const customBaseUrlInput = document.getElementById('secret-setup-custom-base-url');
@@ -1437,14 +1458,16 @@
         deepseekTestBtn &&
         deepseekStatusEl &&
         deepseekModelSelect &&
-        opencodeSection &&
-        opencodeInput &&
-        opencodeTestBtn &&
-        opencodeStatusEl &&
-        opencodeModelSelect &&
-        opencodeCustomModelInput &&
+        glmSection &&
+        glmInput &&
+        glmTestBtn &&
+        glmStatusEl &&
+        glmModelSelect &&
+        glmCustomModelInput &&
         customSection &&
-        customInput &&
+        customLlmList &&
+        customApiKeyInput &&
+        customAddBtn &&
         customTestBtn &&
         customStatusEl &&
         customBaseUrlInput &&
@@ -1471,19 +1494,19 @@
         .map((item) => `<option value="${item.value}">${item.label}</option>`)
         .join('');
 
-      opencodeModelSelect.innerHTML = opencodeModels
+      glmModelSelect.innerHTML = glmModels
         .map((item) => `<option value="${item.value}">${item.label}</option>`)
         .join('');
 
       githubInput.value = initialGithubToken;
       deepseekInput.value = initialApiKey;
-      opencodeInput.value = initialOpenCodeApiKey;
-      customInput.value = initialCustomApiKey;
+      glmInput.value = initialGlmApiKey;
+      customApiKeyInput.value = initialCustomApiKey;
       customBaseUrlInput.value = initialCustomBaseUrl;
       customModelInput.value = initialCustomModel;
 
       deepseekModelSelect.value = initialDeepSeekModel || deepseekPreset.defaultModel;
-      opencodeModelSelect.value = initialOpenCodeModel || opencodePreset.defaultModel;
+      glmModelSelect.value = initialGlmModel || glmPreset.defaultModel;
       rerankerProfileSelect.innerHTML = RERANKER_PROFILES
         .map(
           (item) =>
@@ -1499,7 +1522,7 @@
 
       let githubOk = !!initialGithubToken;
       let deepseekOk = !!initialApiKey;
-      let opencodeOk = !!initialOpenCodeApiKey;
+      let glmOk = !!initialGlmApiKey;
       let customOk = false;
 
       const setErrorText = (text, color) => {
@@ -1555,7 +1578,7 @@
       const syncProviderSections = () => {
         const selectedProvider = getSelectedProvider();
         deepseekSection.style.display = selectedProvider === 'deepseek' ? 'block' : 'none';
-        opencodeSection.style.display = selectedProvider === 'opencode' ? 'block' : 'none';
+        glmSection.style.display = selectedProvider === 'glm' ? 'block' : 'none';
         customSection.style.display = selectedProvider === 'custom' ? 'block' : 'none';
       };
 
@@ -1571,10 +1594,10 @@
           '将通过一次 <code>hello world</code> 请求检查 DeepSeek 配置可用性。';
         deepseekStatusEl.style.color = '#999';
       };
-      const resetOpenCodeStatus = () => {
-        opencodeStatusEl.innerHTML =
-          '将通过一次 <code>hello world</code> 请求检查 OpenCode 配置可用性。';
-        opencodeStatusEl.style.color = '#999';
+      const resetGlmStatus = () => {
+        glmStatusEl.innerHTML =
+          '将通过一次 <code>hello world</code> 请求检查 GLM 配置可用性。';
+        glmStatusEl.style.color = '#999';
       };
       const resetCustomStatus = () => {
         customStatusEl.innerHTML =
@@ -1624,44 +1647,42 @@
       };
 
       const selectedDeepSeekModel = () => normalizeText(deepseekModelSelect.value);
-      const selectedOpenCodeModel = () => {
-        const preset = normalizeText(opencodeModelSelect.value);
-        const custom = normalizeText(opencodeCustomModelInput.value);
+      const selectedGlmModel = () => {
+        const preset = normalizeText(glmModelSelect.value);
+        const custom = normalizeText(glmCustomModelInput.value);
         return custom || preset || '';
       };
       const selectedCustomModel = () => normalizeText(customModelInput.value);
 
       const getProviderDraftFor = (provider) => {
-        if (provider === 'opencode') {
-          const apiKey = normalizeText(opencodeInput.value);
-          const model = selectedOpenCodeModel();
-          if (!apiKey) throw new Error('请先输入 OpenCode API Key。');
-          if (!model) throw new Error('请选择或输入 OpenCode 模型。');
-          const preset = opencodePreset;
-          const fullModel = model.startsWith('opencode/') ? model : `opencode/${model}`;
+        if (provider === 'glm') {
+          const apiKey = normalizeText(glmInput.value);
+          const model = selectedGlmModel();
+          if (!apiKey) throw new Error('请先输入 GLM API Key。');
+          if (!model) throw new Error('请选择或输入 GLM 模型。');
+          const preset = glmPreset;
+          const fullModel = model.startsWith('glm/') ? model : `glm/${model}`;
           return {
-            providerType: 'opencode',
+            providerType: 'glm',
             summaryApiKey: apiKey,
             summaryBaseUrl: preset.baseUrl,
             summaryModel: fullModel,
-            chatModels: (preset.models || []).map((m) => `opencode/${m}`),
-            apiKeySecret: 'OPENCODE_API_KEY',
+            chatModels: (preset.models || []).map((m) => `glm/${m}`),
+            apiKeySecret: 'GLM_API_KEY',
           };
         }
         if (provider === 'custom') {
-          const apiKey = normalizeText(customInput.value);
-          const baseUrl = normalizeBaseUrlForStorage(customBaseUrlInput.value);
-          const model = selectedCustomModel();
-          if (!baseUrl) throw new Error('请先输入自定义 LLM 的 Base URL。');
-          if (!apiKey) throw new Error('请先输入自定义 LLM 的 API Key。');
-          if (!model) throw new Error('请先输入自定义 LLM 的模型名称。');
+          const customLlms = collectCustomLlmEntries();
+          if (!customLlms.length) throw new Error('请先添加至少一个自定义 LLM。');
+          const first = customLlms[0];
           return {
             providerType: 'custom',
-            summaryApiKey: apiKey,
-            summaryBaseUrl: baseUrl,
-            summaryModel: model,
-            chatModels: [model],
+            summaryApiKey: first.apiKey,
+            summaryBaseUrl: first.baseUrl,
+            summaryModel: first.model,
+            chatModels: customLlms.map((e) => e.model),
             apiKeySecret: 'CUSTOM_API_KEY',
+            customLlms: customLlms,
           };
         }
         const apiKey = normalizeText(deepseekInput.value);
@@ -1688,18 +1709,16 @@
 
       const buildPingEntries = () => {
         const provider = getSelectedProvider();
-        if (provider === 'opencode') {
-          const apiKey = normalizeText(opencodeInput.value);
-          const model = selectedOpenCodeModel();
-          if (!apiKey || !model) throw new Error('请先填写 OpenCode API Key 并选择模型。');
-          return [{ apiKey, baseUrl: opencodePreset.baseUrl, model }];
+        if (provider === 'glm') {
+          const apiKey = normalizeText(glmInput.value);
+          const model = selectedGlmModel();
+          if (!apiKey || !model) throw new Error('请先填写 GLM API Key 并选择模型。');
+          return [{ apiKey, baseUrl: glmPreset.baseUrl, model }];
         }
         if (provider === 'custom') {
-          const apiKey = normalizeText(customInput.value);
-          const baseUrl = normalizeBaseUrlForStorage(customBaseUrlInput.value);
-          const model = selectedCustomModel();
-          if (!apiKey || !baseUrl || !model) throw new Error('请先填写完整的自定义 LLM 配置。');
-          return [{ apiKey, baseUrl, model }];
+          const customLlms = collectCustomLlmEntries();
+          if (!customLlms.length) throw new Error('请先添加至少一个自定义 LLM。');
+          return customLlms.map((e) => ({ apiKey: e.apiKey, baseUrl: e.baseUrl, model: e.model }));
         }
         const apiKey = normalizeText(deepseekInput.value);
         const model = selectedDeepSeekModel();
@@ -1713,6 +1732,58 @@
             model,
           },
         ];
+      };
+
+      let customLlmEntries = [];
+
+      const collectCustomLlmEntries = () => customLlmEntries.filter((e) => e.apiKey && e.baseUrl && e.model);
+
+      const renderCustomLlmChips = () => {
+        if (!customLlmList) return;
+        customLlmList.innerHTML = '';
+        const entries = collectCustomLlmEntries();
+        entries.forEach((entry, idx) => {
+          const chip = document.createElement('span');
+          chip.className = 'custom-llm-chip';
+          chip.dataset.index = idx;
+          chip.title = `${entry.model} @ ${entry.baseUrl}`;
+
+          const icon = document.createElement('span');
+          icon.className = 'custom-llm-chip-icon';
+          const initial = (entry.model || '?').charAt(0).toUpperCase();
+          icon.textContent = initial;
+
+          const label = document.createElement('span');
+          label.className = 'custom-llm-chip-label';
+          label.textContent = entry.model;
+
+          const delBtn = document.createElement('span');
+          delBtn.className = 'custom-llm-chip-del';
+          delBtn.textContent = '✕';
+          delBtn.title = '删除此 LLM';
+
+          chip.appendChild(icon);
+          chip.appendChild(label);
+          chip.appendChild(delBtn);
+
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            customLlmEntries.splice(idx, 1);
+            renderCustomLlmChips();
+            resetCustomStatus();
+          });
+
+          chip.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (confirm(`确定要删除自定义 LLM「${entry.model}」吗？`)) {
+              customLlmEntries.splice(idx, 1);
+              renderCustomLlmChips();
+              resetCustomStatus();
+            }
+          });
+
+          customLlmList.appendChild(chip);
+        });
       };
 
       const bindResetOnInput = (elements, resetFn) => {
@@ -1732,15 +1803,24 @@
         deepseekStatusEl.style.color = '#666';
       }
 
-      if (initialOpenCodeApiKey) {
-        opencodeStatusEl.textContent = `已载入当前 OpenCode 配置（${selectedOpenCodeModel()}）；如更换 API Key 或模型，建议点击测试按钮。`;
-        opencodeStatusEl.style.color = '#666';
+      if (initialGlmApiKey) {
+        glmStatusEl.textContent = `已载入当前 GLM 配置（${selectedGlmModel()}）；如更换 API Key 或模型，建议点击测试按钮。`;
+        glmStatusEl.style.color = '#666';
       }
 
       if (initialCustomApiKey) {
-        customStatusEl.textContent = `已载入当前自定义 LLM 配置（${selectedCustomModel()}）；如更换配置，建议点击测试按钮。`;
-        customStatusEl.style.color = '#666';
+        customLlmEntries.push({
+          apiKey: initialCustomApiKey,
+          baseUrl: initialCustomBaseUrl,
+          model: initialCustomModel,
+        });
       }
+      initialCustomLlms.forEach((entry) => {
+        if (!customLlmEntries.some((e) => e.model === entry.model && e.baseUrl === entry.baseUrl)) {
+          customLlmEntries.push(entry);
+        }
+      });
+      renderCustomLlmChips();
 
       syncProviderSections();
       syncRerankerFields();
@@ -1748,8 +1828,8 @@
 
       bindResetOnInput([githubInput], resetGithubStatus);
       bindResetOnInput([deepseekInput, deepseekModelSelect], resetDeepSeekStatus);
-      bindResetOnInput([opencodeInput, opencodeModelSelect, opencodeCustomModelInput], resetOpenCodeStatus);
-      bindResetOnInput([customInput, customBaseUrlInput, customModelInput], resetCustomStatus);
+      bindResetOnInput([glmInput, glmModelSelect, glmCustomModelInput], resetGlmStatus);
+      bindResetOnInput([customApiKeyInput, customBaseUrlInput, customModelInput], resetCustomStatus);
       bindResetOnInput([rerankerApiKeyInput, rerankerBaseUrlInput], resetRerankerTestStatus);
       rerankerProfileSelect.addEventListener('change', syncRerankerFields);
       rerankerProfileSelect.addEventListener('change', resetRerankerTestStatus);
@@ -1817,8 +1897,8 @@
       });
       const updateProviderHint = () => {
         const provider = getSelectedProvider();
-        const name = provider === 'opencode' ? 'OpenCode' : provider === 'custom' ? '自定义 LLM' : 'DeepSeek';
-        const model = provider === 'opencode' ? selectedOpenCodeModel() : provider === 'custom' ? selectedCustomModel() : selectedDeepSeekModel();
+        const name = provider === 'glm' ? 'GLM 智谱' : provider === 'custom' ? '自定义 LLM' : 'DeepSeek';
+        const model = provider === 'glm' ? selectedGlmModel() : provider === 'custom' ? selectedCustomModel() : selectedDeepSeekModel();
         setErrorText(
           `${name}（${model}）密钥将加密写入 GitHub Secrets（用于 GitHub Actions），并同步生成本地 secret.private 备份。`,
           '#999',
@@ -1931,34 +2011,51 @@
         }
       });
 
-      opencodeTestBtn.addEventListener('click', async () => {
-        opencodeTestBtn.disabled = true;
+      glmTestBtn.addEventListener('click', async () => {
+        glmTestBtn.disabled = true;
         try {
-          const models = await pingChatModels(buildPingEntries(), opencodeStatusEl);
-          opencodeStatusEl.textContent = `✅ 配置可用：${models.join(', ')}`;
-          opencodeStatusEl.style.color = '#28a745';
-          opencodeOk = true;
+          const models = await pingChatModels(buildPingEntries(), glmStatusEl);
+          glmStatusEl.textContent = `✅ 配置可用：${models.join(', ')}`;
+          glmStatusEl.style.color = '#28a745';
+          glmOk = true;
         } catch (e) {
           const msg = String(e?.message || e || '');
           if (/CORS/i.test(msg)) {
-            opencodeStatusEl.textContent = `⚠️ ${msg}`;
-            opencodeStatusEl.style.color = '#e68a00';
-            opencodeOk = true;
+            glmStatusEl.textContent = `⚠️ ${msg}`;
+            glmStatusEl.style.color = '#e68a00';
+            glmOk = true;
           } else {
-            opencodeStatusEl.textContent = `❌ 测试失败：${msg}`;
-            opencodeStatusEl.style.color = '#c00';
-            opencodeOk = false;
+            glmStatusEl.textContent = `❌ 测试失败：${msg}`;
+            glmStatusEl.style.color = '#c00';
+            glmOk = false;
           }
         } finally {
-          opencodeTestBtn.disabled = false;
+          glmTestBtn.disabled = false;
         }
+      });
+
+      customAddBtn.addEventListener('click', () => {
+        const apiKey = normalizeText(customApiKeyInput.value);
+        const baseUrl = normalizeBaseUrlForStorage(customBaseUrlInput.value);
+        const model = normalizeText(customModelInput.value);
+        if (!apiKey) { customStatusEl.textContent = '请填写 API Key。'; customStatusEl.style.color = '#c00'; return; }
+        if (!baseUrl) { customStatusEl.textContent = '请填写 Base URL。'; customStatusEl.style.color = '#c00'; return; }
+        if (!model) { customStatusEl.textContent = '请填写模型名称。'; customStatusEl.style.color = '#c00'; return; }
+        customLlmEntries.push({ apiKey, baseUrl, model });
+        customApiKeyInput.value = '';
+        customBaseUrlInput.value = '';
+        customModelInput.value = '';
+        renderCustomLlmChips();
+        customStatusEl.textContent = `✅ 已添加自定义 LLM：${model}`;
+        customStatusEl.style.color = '#28a745';
+        customOk = true;
       });
 
       customTestBtn.addEventListener('click', async () => {
         customTestBtn.disabled = true;
         try {
           const models = await pingChatModels(buildPingEntries(), customStatusEl);
-          customStatusEl.textContent = `✅ 配置可用：${models.join(', ')}`;
+          customStatusEl.textContent = `✅ 配置可用：共 ${models.length} 个模型`;
           customStatusEl.style.color = '#28a745';
           customOk = true;
         } catch (e) {
@@ -1997,13 +2094,16 @@
           setErrorText('请先点击"测试当前配置"，确认 DeepSeek 配置可用。', '#c00');
           return;
         }
-        if (providerDraft.providerType === 'opencode' && !opencodeOk) {
-          setErrorText('请先点击"测试当前配置"，确认 OpenCode 配置可用。', '#c00');
+        if (providerDraft.providerType === 'glm' && !glmOk) {
+          setErrorText('请先点击"测试当前配置"，确认 GLM 配置可用。', '#c00');
           return;
         }
-        if (providerDraft.providerType === 'custom' && !customOk) {
-          setErrorText('请先点击"测试当前配置"，确认自定义 LLM 配置可用。', '#c00');
-          return;
+        if (providerDraft.providerType === 'custom' && !customOk && collectCustomLlmEntries().length > 0) {
+          if (confirm('未测试自定义 LLM 配置是否可用，继续保存吗？')) {
+            // 允许跳过测试
+          } else {
+            return;
+          }
         }
 
         const nowIso = new Date().toISOString();
@@ -2034,22 +2134,41 @@
             : {
                 enabled: false,
               },
-          opencode: {
-            apiKey: normalizeText(opencodeInput.value) || '',
-            model: selectedOpenCodeModel() || '',
+          glm: {
+            apiKey: normalizeText(glmInput.value) || '',
+            model: selectedGlmModel() || '',
+          },
+          opencode: currentSecret.opencode || {
+            apiKey: '',
+            model: '',
           },
           custom: {
-            apiKey: normalizeText(customInput.value) || '',
-            baseUrl: normalizeBaseUrlForStorage(customBaseUrlInput.value || ''),
-            model: selectedCustomModel() || '',
+            apiKey: initialCustomApiKey,
+            baseUrl: initialCustomBaseUrl,
+            model: initialCustomModel,
           },
-          chatLLMs: [
-            {
-              apiKey: providerDraft.summaryApiKey,
-              baseUrl: providerDraft.summaryBaseUrl,
-              models: providerDraft.chatModels,
-            },
-          ],
+          chatLLMs: (() => {
+            const llms = [];
+            if (providerDraft.summaryApiKey && providerDraft.summaryBaseUrl) {
+              llms.push({
+                apiKey: providerDraft.summaryApiKey,
+                baseUrl: providerDraft.summaryBaseUrl,
+                models: providerDraft.chatModels,
+              });
+            }
+            const customLlms = providerDraft.customLlms || collectCustomLlmEntries();
+            customLlms.forEach((entry) => {
+              const existing = llms.find((l) => l.baseUrl === entry.baseUrl && l.apiKey === entry.apiKey);
+              if (existing) {
+                if (!existing.models.includes(entry.model)) {
+                  existing.models.push(entry.model);
+                }
+              } else {
+                llms.push({ apiKey: entry.apiKey, baseUrl: entry.baseUrl, models: [entry.model] });
+              }
+            });
+            return llms;
+          })(),
         };
 
         try {

@@ -288,6 +288,7 @@ window.PrivateDiscussionChat = (function () {
               tabindex="-1"
             ></select>
           </div>
+          <div id="chat-llm-icons" class="chat-llm-icons"></div>
           <span id="chat-status" class="chat-status"></span>
         </div>
       </div>
@@ -1463,6 +1464,96 @@ window.PrivateDiscussionChat = (function () {
     button.setAttribute('aria-expanded', 'false');
   };
 
+  const syncChatLlmIcons = (models = []) => {
+    const container = document.getElementById('chat-llm-icons');
+    if (!container) return;
+    container.innerHTML = '';
+    const cleanModels = models.filter((m) => (m.name || '').trim());
+    if (!cleanModels.length) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+
+    const currentSelect = document.getElementById('chat-llm-model-select');
+    const currentValue = currentSelect ? currentSelect.value : '';
+
+    cleanModels.forEach((model, idx) => {
+      const initial = (model.name || '?').charAt(0).toUpperCase();
+      const chip = document.createElement('span');
+      chip.className = 'chat-llm-icon' + (model.name === currentValue ? ' is-active' : '');
+      chip.title = model.name;
+      chip.textContent = initial;
+      chip.dataset.index = idx;
+
+      const delBtn = document.createElement('span');
+      delBtn.className = 'chat-llm-icon-del';
+      delBtn.textContent = '✕';
+      delBtn.title = '删除 ' + model.name;
+
+      chip.appendChild(delBtn);
+
+      chip.addEventListener('click', (e) => {
+        if (e.target === delBtn) return;
+        if (currentSelect) {
+          currentSelect.value = model.name;
+          currentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`确定要删除「${model.name}」吗？`)) {
+          const secret = window.decoded_secret_private || {};
+          const chatLLMs = Array.isArray(secret.chatLLMs) ? secret.chatLLMs : [];
+          let removed = false;
+          for (let i = chatLLMs.length - 1; i >= 0; i--) {
+            const entry = chatLLMs[i];
+            const modelsArr = Array.isArray(entry.models) ? entry.models : [];
+            const mIdx = modelsArr.indexOf(model.name);
+            if (mIdx !== -1) {
+              modelsArr.splice(mIdx, 1);
+              if (!modelsArr.length) {
+                chatLLMs.splice(i, 1);
+              }
+              removed = true;
+              break;
+            }
+          }
+          if (!removed) {
+            if (idx < chatLLMs.length) {
+              chatLLMs.splice(idx, 1);
+            }
+          }
+          secret.chatLLMs = chatLLMs;
+          window.decoded_secret_private = secret;
+          // 重新同步图标和模型选择器
+          const remainingModels = getChatLLMConfig();
+          syncChatLlmIcons(remainingModels);
+          const select = document.getElementById('chat-llm-model-select');
+          if (select) {
+            const names = remainingModels.map((m) => (m.name || '').trim()).filter(Boolean);
+            select.innerHTML = '';
+            names.forEach((name) => {
+              const opt = document.createElement('option');
+              opt.value = name;
+              opt.textContent = name;
+              select.appendChild(opt);
+            });
+            if (names.length) select.value = names[0];
+            syncChatModelPicker(names);
+          }
+        }
+      });
+
+      chip.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (confirm(`确定要删除 LLM「${model.name}」吗？`)) {
+          delBtn.click();
+        }
+      });
+
+      container.appendChild(chip);
+    });
+  };
+
   const syncChatModelPicker = (names = []) => {
     const { picker, button, label, menu, select } = getChatModelPickerElements();
     if (!picker || !button || !label || !menu || !select) return;
@@ -1646,6 +1737,7 @@ window.PrivateDiscussionChat = (function () {
             '未检测到可用 Chat 模型，请在新配置指引中配置 chatLLMs。';
           status.style.color = '#c00';
         }
+        syncChatLlmIcons(chatModels);
         syncChatModelPicker(names);
 
         // 用户手动切换模型时，更新偏好，跨页面复用
@@ -1656,6 +1748,7 @@ window.PrivateDiscussionChat = (function () {
             if (v) {
               savePreferredModelName(v);
             }
+            syncChatLlmIcons(chatModels);
             syncChatModelPicker(names);
           });
         }
@@ -1682,6 +1775,7 @@ window.PrivateDiscussionChat = (function () {
       if (inGuestMode) {
         modelSelect.disabled = true;
         modelSelect.title = '当前为游客模式或未解锁密钥，无法选择大模型。';
+        syncChatLlmIcons([]);
         syncChatModelPicker([]);
       }
     }
