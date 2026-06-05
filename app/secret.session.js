@@ -456,12 +456,27 @@
           Authorization: `Bearer ${apiKey}`,
         };
 
-        const doFetch = (requestPayload) => fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(requestPayload),
-          signal: controller.signal,
-        });
+        const doFetch = async (requestPayload) => {
+          try {
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(requestPayload),
+              signal: controller.signal,
+            });
+            return res;
+          } catch (fetchErr) {
+            const msg = String(fetchErr?.message || fetchErr || '').toLowerCase();
+            const isCorsOrNetwork = !fetchErr?.status && (
+              msg.includes('failed to fetch') || msg.includes('networkerror') ||
+              msg.includes('cors') || msg.includes('network') || msg.includes('load')
+            );
+            if (isCorsOrNetwork) {
+              throw new Error(`${model} 浏览器 CORS 限制：无法从前端直接连接 ${endpoint}，请检查 API 是否支持跨域。后台工作流不受影响，可跳过测试继续保存配置。`);
+            }
+            throw fetchErr;
+          }
+        };
         let resp = await doFetch(payload);
         if (!resp.ok && payload.max_completion_tokens != null) {
           const text = await resp.text().catch(() => '');
@@ -1924,9 +1939,16 @@
           opencodeStatusEl.style.color = '#28a745';
           opencodeOk = true;
         } catch (e) {
-          opencodeStatusEl.textContent = `❌ 测试失败：${e.message || e}`;
-          opencodeStatusEl.style.color = '#c00';
-          opencodeOk = false;
+          const msg = String(e?.message || e || '');
+          if (/CORS/i.test(msg)) {
+            opencodeStatusEl.textContent = `⚠️ ${msg}`;
+            opencodeStatusEl.style.color = '#e68a00';
+            opencodeOk = true;
+          } else {
+            opencodeStatusEl.textContent = `❌ 测试失败：${msg}`;
+            opencodeStatusEl.style.color = '#c00';
+            opencodeOk = false;
+          }
         } finally {
           opencodeTestBtn.disabled = false;
         }
@@ -1940,9 +1962,16 @@
           customStatusEl.style.color = '#28a745';
           customOk = true;
         } catch (e) {
-          customStatusEl.textContent = `❌ 测试失败：${e.message || e}`;
-          customStatusEl.style.color = '#c00';
-          customOk = false;
+          const msg = String(e?.message || e || '');
+          if (/CORS/i.test(msg)) {
+            customStatusEl.textContent = `⚠️ ${msg}`;
+            customStatusEl.style.color = '#e68a00';
+            customOk = true;
+          } else {
+            customStatusEl.textContent = `❌ 测试失败：${msg}`;
+            customStatusEl.style.color = '#c00';
+            customOk = false;
+          }
         } finally {
           customTestBtn.disabled = false;
         }
