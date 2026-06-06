@@ -26,34 +26,6 @@ class MainPipelineTest(unittest.TestCase):
     def setUpClass(cls):
         cls.mod = _load_module()
 
-    def _write_rrf_input(self, root: Path, token: str) -> Path:
-        filtered_dir = root / "archive" / token / "filtered"
-        filtered_dir.mkdir(parents=True, exist_ok=True)
-        path = filtered_dir / f"arxiv_papers_{token}.json"
-        payload = {
-            "generated_at": "2026-03-10T00:00:00+00:00",
-            "papers": [
-                {"id": "p1", "title": "Paper 1", "abstract": "A"},
-                {"id": "p2", "title": "Paper 2", "abstract": "B"},
-                {"id": "p3", "title": "Paper 3", "abstract": "C"},
-            ],
-            "queries": [
-                {
-                    "type": "intent_query",
-                    "tag": "query:test",
-                    "paper_tag": "query:test",
-                    "query_text": "test query",
-                    "sim_scores": {
-                        "p1": {"score": 0.9, "rank": 1},
-                        "p2": {"score": 0.6, "rank": 2},
-                        "p3": {"score": 0.2, "rank": 3},
-                    },
-                }
-            ],
-        }
-        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-        return path
-
     def test_resolve_summary_step_env_uses_summary_overrides(self):
         with patch.dict(
             os.environ,
@@ -74,74 +46,101 @@ class MainPipelineTest(unittest.TestCase):
         self.assertEqual(env["LLM_PRIMARY_BASE_URL"], "https://summary.example.com/v1")
         self.assertEqual(env["DEEPSEEK_MODEL"], "deepseek-v4-flash")
 
-    def test_main_runs_local_rerank_without_remote_rerank_base(self):
+    def test_resolve_summary_step_env_falls_back_to_deepseek(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DEEPSEEK_API_KEY": "fallback-key",
+                "DEEPSEEK_BASE_URL": "https://fallback.example.com",
+                "DEEPSEEK_MODEL": "deepseek-chat",
+            },
+            clear=True,
+        ):
+            env = self.mod.resolve_summary_step_env()
+        self.assertEqual(env["DEEPSEEK_API_KEY"], "fallback-key")
+        self.assertEqual(env["DEEPSEEK_BASE_URL"], "https://fallback.example.com")
+        self.assertEqual(env["DEEPSEEK_MODEL"], "deepseek-chat")
+
+    def test_normalize_arxiv_id_removes_version_suffix(self):
+        self.assertEqual(self.mod.normalize_arxiv_id("2401.12345v2"), "2401.12345")
+        self.assertEqual(self.mod.normalize_arxiv_id("2401.12345v1"), "2401.12345")
+
+    def test_normalize_arxiv_id_strips_url_prefix(self):
+        cases = [
+            ("https://arxiv.org/abs/2401.12345", "2401.12345"),
+            ("http://arxiv.org/pdf/2401.12345.pdf", "2401.12345"),
+            ("https://arxiv.org/abs/2401.12345v2", "2401.12345"),
+        ]
+        for raw, expected in cases:
+            self.assertEqual(self.mod.normalize_arxiv_id(raw), expected)
+
+    def test_normalize_arxiv_id_strips_arxiv_prefix(self):
+        self.assertEqual(self.mod.normalize_arxiv_id("arxiv:2401.12345"), "2401.12345")
+
+    def test_normalize_arxiv_id_returns_empty_for_invalid(self):
+        self.assertEqual(self.mod.normalize_arxiv_id(""), "")
+        self.assertEqual(self.mod.normalize_arxiv_id("   "), "")
+        self.assertEqual(self.mod.normalize_arxiv_id("not-an-id"), "not-an-id")
+
+    def test_parse_trace_ids_deduplicates(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = self.mod.parse_trace_ids(["2401.12345", "2401.12345", "2402.67890"])
+        self.assertEqual(result, ["2401.12345", "2402.67890"])
+
+    def test_parse_trace_ids_normalizes(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = self.mod.parse_trace_ids(["https://arxiv.org/abs/2401.12345v2"])
+        self.assertEqual(result, ["2401.12345"])
+
+    def test_parse_trace_ids_reads_env(self):
+        with patch.dict(os.environ, {"DPR_TRACE_ARXIV_IDS": "2403.abcde"}, clear=True):
+            result = self.mod.parse_trace_ids(["2401.12345"])
+        # env value "2403.abcde" is not a valid arXiv ID pattern, so it stays as-is
+        self.assertIn("2403.abcde", result)
+        self.assertIn("2401.12345", result)
+
+    def test_parse_comma_ids_splits_mixed_delimiters(self):
+        result = self.mod.parse_comma_ids("2401.12345, 2402.67890;2403.abcde")
+        self.assertEqual(result, ["2401.12345", "2402.67890", "2403.abcde"])
+
+    def test_parse_comma_ids_deduplicates(self):
+        result = self.mod.parse_comma_ids("2401.12345,2401.12345")
+        self.assertEqual(result, ["2401.12345"])
+
+    def test_main_exits_early_when_no_ids(self):
+        with patch.object(self.mod, "run_step") as mock_run:
+            with patch.object(sys, "argv", ["main.py"]):
+                self.mod.main()
+        mock_run.assert_not_called()
+
+    def test_main_calls_all_three_steps(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             src_dir = root / "src"
             src_dir.mkdir(parents=True, exist_ok=True)
-            token = "20260310"
-            self._write_rrf_input(root, token)
-            calls = []
 
+            raw_dir = root / "archive" / "20260310" / "raw"
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            raw_path = raw_dir / "arxiv_papers_20260310.by_ids.json"
+            raw_path.write_text(json.dumps([{"id": "2401.12345", "title": "Test"}]), encoding="utf-8")
+
+            calls = []
             def fake_run_step(label, args, env=None):
                 calls.append((label, args, env))
 
-            with patch.object(self.mod, "ROOT_DIR", str(root)), patch.object(
-                self.mod, "SRC_DIR", str(src_dir)
-            ), patch.object(
-                self.mod, "resolve_run_date_token", return_value=token
-            ), patch.object(
-                self.mod, "resolve_sidebar_date_label", return_value=None
-            ), patch.object(
-                self.mod, "parse_trace_ids", return_value=[]
-            ), patch.object(
-                self.mod, "run_step", side_effect=fake_run_step
-            ), patch.object(
-                sys, "argv", ["main.py"]
-            ), patch.dict(
-                os.environ,
-                {"LLM_PRIMARY_BASE_URL": "https://api.openai.com/v1"},
-                clear=True,
-            ):
+            with patch.object(self.mod, "ROOT_DIR", str(root)), \
+                 patch.object(self.mod, "SRC_DIR", str(src_dir)), \
+                 patch.object(self.mod, "run_step", side_effect=fake_run_step), \
+                 patch.object(self.mod, "load_json_safe", return_value=[{"id": "2401.12345"}]), \
+                 patch.object(sys, "argv", ["main.py", "--arxiv-ids", "2401.12345"]), \
+                 patch.dict(os.environ, {"PATH": os.environ.get("PATH", "")}, clear=True):
                 self.mod.main()
 
             labels = [item[0] for item in calls]
-            self.assertIn("Step 3 - Rerank", labels)
-            self.assertIn("Step 4 - LLM refine", labels)
-
-    def test_main_keeps_local_rerank_in_deepseek_mode(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            src_dir = root / "src"
-            src_dir.mkdir(parents=True, exist_ok=True)
-            token = "20260310"
-            self._write_rrf_input(root, token)
-            calls = []
-
-            def fake_run_step(label, args, env=None):
-                calls.append((label, args, env))
-
-            with patch.object(self.mod, "ROOT_DIR", str(root)), patch.object(
-                self.mod, "SRC_DIR", str(src_dir)
-            ), patch.object(
-                self.mod, "resolve_run_date_token", return_value=token
-            ), patch.object(
-                self.mod, "resolve_sidebar_date_label", return_value=None
-            ), patch.object(
-                self.mod, "parse_trace_ids", return_value=[]
-            ), patch.object(
-                self.mod, "run_step", side_effect=fake_run_step
-            ), patch.object(
-                sys, "argv", ["main.py"]
-            ), patch.dict(
-                os.environ,
-                {"LLM_PRIMARY_BASE_URL": "https://api.deepseek.com"},
-                clear=True,
-            ):
-                self.mod.main()
-
-            labels = [item[0] for item in calls]
-            self.assertIn("Step 3 - Rerank", labels)
+            self.assertIn("Step 1 - fetch by IDs", labels)
+            self.assertIn("Step 2 - select papers", labels)
+            self.assertIn("Step 3 - generate docs", labels)
+            self.assertEqual(len(labels), 3)
 
 
 if __name__ == "__main__":

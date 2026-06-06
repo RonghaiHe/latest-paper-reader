@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple
 
@@ -937,15 +938,39 @@ def force_all_into_quick(result: Dict[str, Any]) -> Dict[str, Any]:
     return copied
 
 
+def _normalize_arxiv_id(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    if text.startswith("arxiv:"):
+        text = text.split(":", 1)[1].strip()
+    if text.startswith("http://") or text.startswith("https://"):
+        text = text.split("?", 1)[0].split("#", 1)[0]
+        text = text.rstrip("/")
+        if "/abs/" in text:
+            text = text.rsplit("/abs/", 1)[-1]
+        elif "/pdf/" in text:
+            text = text.rsplit("/pdf/", 1)[-1]
+        else:
+            text = text.rsplit("/", 1)[-1]
+    if text.endswith(".pdf"):
+        text = text[: -len(".pdf")]
+    text = text.strip()
+    matched = re.match(r"^(\d{4}\.\d{4,5})(?:v\d+)?$", text)
+    if matched:
+        return matched.group(1)
+    return text
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Step 5: select papers for deep dive + quick skim (standard/extend/spark).",
+        description="Step 5: select papers for deep dive + quick skim.",
     )
     parser.add_argument(
         "--input",
         type=str,
         default=os.path.join(RANKED_DIR, f"arxiv_papers_{TODAY_STR}.llm.json"),
-        help="LLM refine JSON input path.",
+        help="Input JSON path (LLM refine or raw papers).",
     )
     parser.add_argument(
         "--output-dir",
@@ -980,6 +1005,17 @@ def main() -> None:
         default=None,
         help="When set, output ALL candidates with llm_score >= min_score into quick_skim (no caps).",
     )
+    parser.add_argument(
+        "--raw-input-mode",
+        action="store_true",
+        help="Input is raw paper list (no LLM refine data). --deep-dive-ids controls deep_dive assignment.",
+    )
+    parser.add_argument(
+        "--deep-dive-ids",
+        type=str,
+        default="",
+        help="Comma/space/newline separated arXiv IDs to assign to deep_dive in raw-input-mode.",
+    )
 
     args = parser.parse_args()
 
@@ -991,6 +1027,65 @@ def main() -> None:
     if not os.path.isabs(output_dir):
         output_dir = os.path.abspath(os.path.join(ROOT_DIR, output_dir))
 
+    # ── raw-input-mode: 原始论文列表直接划分 quick_skim / deep_dive ──
+    if args.raw_input_mode:
+        log_substep("5.0", "raw-input-mode：手动 ID 输入模式", "START")
+        deep_dive_set: set[str] = set()
+        raw_deep_dive = str(args.deep_dive_ids or "").strip()
+        if raw_deep_dive:
+            for token in re.split(r"[\s,;]+", raw_deep_dive):
+                pid = _normalize_arxiv_id(token)
+                if pid:
+                    deep_dive_set.add(pid)
+        log(f"[INFO] deep-dive-ids ({len(deep_dive_set)}): {sorted(deep_dive_set)}")
+
+        if not os.path.exists(input_path):
+            log(f"[ERROR] 输入文件不存在: {input_path}")
+            sys.exit(1)
+
+        raw_papers = load_json(input_path)
+        if not isinstance(raw_papers, list):
+            log(f"[ERROR] raw-input-mode 输入应为 JSON 列表，但得到 {type(raw_papers)}")
+            sys.exit(1)
+
+        deep_dive: list[dict] = []
+        quick_skim: list[dict] = []
+        for paper in raw_papers:
+            if not isinstance(paper, dict):
+                continue
+            pid = _normalize_arxiv_id(paper.get("id") or paper.get("paper_id") or "")
+            if not pid:
+                continue
+            entry = dict(paper)
+            entry["id"] = pid
+            entry["llm_score"] = 0.0
+            entry["selection_source"] = "manual_input"
+            if pid in deep_dive_set:
+                deep_dive.append(entry)
+            else:
+                quick_skim.append(entry)
+
+        result = {
+            "mode": "manual",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "stats": {
+                "mode": "manual",
+                "deep_selected": len(deep_dive),
+                "quick_selected": len(quick_skim),
+                "total_papers": len(raw_papers),
+            },
+            "deep_dive": deep_dive,
+            "quick_skim": quick_skim,
+        }
+
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"arxiv_papers_{TODAY_STR}.manual.json")
+        save_json(result, output_path)
+        log(f"[INFO] deep_dive={len(deep_dive)} quick_skim={len(quick_skim)}")
+        log_substep("5.0", "raw-input-mode 完成", "END")
+        return
+
+    # ── 原 pipeline 模式 ──
     setting = load_arxiv_paper_setting()
     carryover_days = int(setting.get("days_window") or CARRYOVER_DAYS)
     mode_text = args.modes
@@ -1002,7 +1097,7 @@ def main() -> None:
     if not modes:
         raise ValueError("modes must include at least one of: standard, extend, spark, skims")
 
-    # skims 模式用于“回溯窗口/批量重跑”：默认不做历史 seen_ids 过滤，
+    # skims 模式用于"回溯窗口/批量重跑"：默认不做历史 seen_ids 过滤，
     # 否则会因为之前推荐过而导致输出数量偏少。
     ignore_seen_ids = False
     if modes and all((MODES.get(m) or {}).get("all_quick_min_score") is not None for m in modes):
@@ -1015,7 +1110,6 @@ def main() -> None:
             papers = []
             llm_ranked = []
         else:
-            # 检查输入文件是否存在，如果不存在则只使用 carryover
             if not os.path.exists(input_path):
                 log(f"[INFO] 输入文件不存在：{input_path}（今天没有新论文，将只使用 carryover）")
                 papers = []

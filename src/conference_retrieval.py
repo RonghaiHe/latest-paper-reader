@@ -34,7 +34,7 @@ DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from filter import E5_QUERY_PREFIX, encode_queries  # noqa: E402
+from deprecated.filter import E5_QUERY_PREFIX, encode_queries  # noqa: E402
 from model_loader import load_sentence_transformer  # noqa: E402
 from source_config import get_source_backend, get_supabase_shared_config  # noqa: E402
 from subscription_plan import build_pipeline_inputs  # noqa: E402

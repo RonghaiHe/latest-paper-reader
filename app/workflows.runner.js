@@ -7,10 +7,15 @@ window.DPRWorkflowRunner = (function () {
       key: 'latest-now',
       id: 'latest-paper-reader.yml',
       name: '立即爬取并处理论文',
-      desc: '触发 latest-paper-reader 工作流（抓取→召回→重排→生成 docs）。',
-      dispatchInputs: {
-        run_enrich: 'false',
-      },
+      desc: '触发 latest-paper-reader 工作流（旧流水线，仅作兼容）。',
+      dispatchInputs: {},
+    },
+    {
+      key: 'manual-fetch',
+      id: 'latest-paper-reader.yml',
+      name: '手动输入 arXiv ID 处理',
+      desc: '按用户指定的 arXiv ID 列表获取论文并生成文档。',
+      dispatchInputs: {},
     },
     {
       key: 'sync',
@@ -39,39 +44,7 @@ window.DPRWorkflowRunner = (function () {
     },
   ];
 
-  const QUICK_FETCH_PRESETS = {
-    '10': {
-      key: 'latest-now',
-      dispatchInputs: {
-        run_enrich: 'false',
-        fetch_days: '10',
-      },
-    },
-    '30': {
-      key: 'latest-now',
-      dispatchInputs: {
-        run_enrich: 'false',
-        fetch_days: '30',
-        fetch_mode: 'skims',
-      },
-    },
-    '30-skims': {
-      key: 'latest-now',
-      dispatchInputs: {
-        run_enrich: 'false',
-        fetch_days: '30',
-        fetch_mode: 'skims',
-      },
-    },
-    '30-standard': {
-      key: 'latest-now',
-      dispatchInputs: {
-        run_enrich: 'false',
-        fetch_days: '30',
-        fetch_mode: 'standard',
-      },
-    },
-  };
+  const QUICK_FETCH_PRESETS = {};
 
   let overlay = null;
   let panel = null;
@@ -874,6 +847,19 @@ window.DPRWorkflowRunner = (function () {
     }
   };
 
+  const dispatchManualWorkflow = async (arxivIdsCsv, deepDiveIdsCsv) => {
+    const wf = getWorkflowByKey('manual-fetch');
+    if (!wf) {
+      setStatus('manual-fetch 工作流配置缺失。', '#c00');
+      return;
+    }
+    const extraInputs = { arxiv_ids: arxivIdsCsv };
+    if (deepDiveIdsCsv) {
+      extraInputs.deep_dive_ids = deepDiveIdsCsv;
+    }
+    return dispatchAndMonitor(wf, extraInputs);
+  };
+
   const renderRun = (owner, repo, run, jobs) => {
     const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${run.id}`;
     const status = run.status || '';
@@ -1066,5 +1052,6 @@ window.DPRWorkflowRunner = (function () {
     runQuickFetchByDays,
     runConferenceRetrieval,
     runConferenceMaintain,
+    dispatchManualWorkflow,
   };
 })();

@@ -35,8 +35,10 @@ window.SubscriptionsManager = (function () {
   let resetContentMsgEl = null;
   let adminDailyTabBtn = null;
   let adminConferenceTabBtn = null;
+  let adminManualTabBtn = null;
   let adminDailyPanel = null;
   let adminConferencePanel = null;
+  let adminManualPanel = null;
   let activeAdminPanelTab = 'latest';
 
   let draftConfig = null;
@@ -702,10 +704,12 @@ window.SubscriptionsManager = (function () {
   };
 
   const syncAdminPanelTabs = () => {
-    const active = activeAdminPanelTab === 'conference' ? 'conference' : 'latest';
+    const active = activeAdminPanelTab === 'conference' ? 'conference'
+      : activeAdminPanelTab === 'manual' ? 'manual' : 'latest';
     [
       [adminDailyTabBtn, active === 'latest'],
       [adminConferenceTabBtn, active === 'conference'],
+      [adminManualTabBtn, active === 'manual'],
     ].forEach(([btn, isActive]) => {
       if (!btn) return;
       btn.classList.toggle('is-active', !!isActive);
@@ -718,13 +722,17 @@ window.SubscriptionsManager = (function () {
     if (adminConferencePanel) {
       adminConferencePanel.hidden = active !== 'conference';
     }
+    if (adminManualPanel) {
+      adminManualPanel.hidden = active !== 'manual';
+    }
     if (panel) {
       panel.classList.toggle('is-conference-tab', active === 'conference');
     }
   };
 
   const switchAdminPanelTab = (tab) => {
-    const nextTab = tab === 'conference' ? 'conference' : 'latest';
+    const nextTab = tab === 'conference' ? 'conference'
+      : tab === 'manual' ? 'manual' : 'latest';
     if (activeAdminPanelTab === nextTab) {
       syncAdminPanelTabs();
       return;
@@ -1133,10 +1141,20 @@ window.SubscriptionsManager = (function () {
                 aria-selected="false"
                 aria-controls="arxiv-conference-control-side"
               >
-                会议论文
-              </button>
-            </div>
-          </div>
+                 会议论文
+               </button>
+               <button
+                 id="dpr-admin-tab-manual"
+                 class="dpr-admin-tab"
+                 type="button"
+                 role="tab"
+                 aria-selected="false"
+                 aria-controls="arxiv-manual-control-side"
+               >
+                 手动输入
+               </button>
+             </div>
+           </div>
           <div style="display:flex; gap:8px; align-items:center;">
             <button id="arxiv-config-save-btn" class="arxiv-tool-btn" style="padding:2px 10px; background:#2e7d32; color:white;">保存</button>
             <button id="arxiv-open-secret-setup-btn" class="arxiv-tool-btn" style="padding:2px 10px;">密钥配置</button>
@@ -1257,6 +1275,51 @@ window.SubscriptionsManager = (function () {
               </div>
             </div>
           </div>
+
+          <div
+            id="arxiv-manual-control-side"
+            class="dpr-admin-task-panel"
+            role="tabpanel"
+            aria-labelledby="dpr-admin-tab-manual"
+            hidden
+          >
+            <div class="dpr-conference-pane">
+              <div class="dpr-bulk-bar-head">
+                <div>
+                  <div class="chat-quick-run-title">手动输入 arXiv ID</div>
+                  <div class="dpr-conference-note">每行一个 arXiv ID，深拷贝并解析后生成论文文档。</div>
+                </div>
+              </div>
+              <div class="dpr-choice-field">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">arXiv ID（必填，每行一个）</label>
+                <textarea
+                  id="arxiv-manual-ids-input"
+                  class="dpr-manual-textarea"
+                  placeholder="例如：&#10;2401.12345&#10;2402.67890&#10;2303.abcde"
+                  style="width:100%; height:120px; resize:vertical; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:monospace; font-size:13px;"
+                ></textarea>
+              </div>
+              <div class="dpr-choice-field">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">精读 ID（可选，每行一个）</label>
+                <textarea
+                  id="arxiv-manual-deep-dive-input"
+                  class="dpr-manual-textarea"
+                  placeholder="指定需要精读的 arXiv ID（留空则全部进入速览）"
+                  style="width:100%; height:80px; resize:vertical; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:monospace; font-size:13px;"
+                ></textarea>
+              </div>
+              <div style="margin-top:10px;">
+                <button
+                  id="arxiv-manual-run-btn"
+                  class="chat-quick-run-run-btn dpr-task-start-btn"
+                  type="button"
+                >
+                  开始处理
+                </button>
+                <div id="arxiv-manual-run-msg" class="chat-quick-run-msg"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -1269,8 +1332,10 @@ window.SubscriptionsManager = (function () {
     msgEl = document.getElementById('dpr-smart-msg');
     adminDailyTabBtn = document.getElementById('dpr-admin-tab-latest');
     adminConferenceTabBtn = document.getElementById('dpr-admin-tab-conference');
+    adminManualTabBtn = document.getElementById('dpr-admin-tab-manual');
     adminDailyPanel = document.getElementById('arxiv-search-quick-run-side');
     adminConferencePanel = document.getElementById('arxiv-conference-control-side');
+    adminManualPanel = document.getElementById('arxiv-manual-control-side');
 
     const reloadAll = () => {
       renderFromDraft();
@@ -1459,6 +1524,13 @@ window.SubscriptionsManager = (function () {
       });
     }
 
+    if (adminManualTabBtn && !adminManualTabBtn._bound) {
+      adminManualTabBtn._bound = true;
+      adminManualTabBtn.addEventListener('click', () => {
+        switchAdminPanelTab('manual');
+      });
+    }
+
     quickRun10dBtn = null;
     quickRun30dBtn = null;
     quickRun30dStandardBtn = null;
@@ -1597,6 +1669,36 @@ window.SubscriptionsManager = (function () {
       resetContentBtn._bound = true;
       resetContentBtn.addEventListener('click', () => {
         runResetContent(resetContentMsgEl);
+      });
+    }
+
+    const manualRunBtn = document.getElementById('arxiv-manual-run-btn');
+    const manualMsgEl = document.getElementById('arxiv-manual-run-msg');
+    if (manualRunBtn && !manualRunBtn._bound) {
+      manualRunBtn._bound = true;
+      manualRunBtn.addEventListener('click', async () => {
+        if (!manualMsgEl) return;
+        const idsInput = document.getElementById('arxiv-manual-ids-input');
+        const deepInput = document.getElementById('arxiv-manual-deep-dive-input');
+        const rawIds = idsInput ? (idsInput.value || '').trim() : '';
+        const rawDeep = deepInput ? (deepInput.value || '').trim() : '';
+        if (!rawIds) {
+          manualMsgEl.textContent = '请至少输入一个 arXiv ID。';
+          manualMsgEl.style.color = '#c00';
+          return;
+        }
+        const csvIds = rawIds.split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean).join(',');
+        const csvDeep = rawDeep ? rawDeep.split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean).join(',') : '';
+        manualMsgEl.textContent = '正在触发处理...';
+        manualMsgEl.style.color = '#666';
+        try {
+          await window.DPRWorkflowRunner.dispatchManualWorkflow(csvIds, csvDeep);
+          manualMsgEl.textContent = '已触发，请查看工作流面板运行状态。';
+          manualMsgEl.style.color = '#080';
+        } catch (e) {
+          manualMsgEl.textContent = '触发失败：' + (e.message || String(e));
+          manualMsgEl.style.color = '#c00';
+        }
       });
     }
 

@@ -17,9 +17,9 @@ except Exception:  # pragma: no cover - 兼容 package 导入路径
   from src.source_config import list_known_source_keys, validate_profile_paper_sources
 
 try:
-  from query_boolean import clean_expr_for_embedding
+  from deprecated.query_boolean import clean_expr_for_embedding
 except Exception:  # pragma: no cover - 兼容 package 导入路径
-  from src.query_boolean import clean_expr_for_embedding
+  from src.deprecated.query_boolean import clean_expr_for_embedding
 
 
 MAIN_TERM_WEIGHT = 1.0
