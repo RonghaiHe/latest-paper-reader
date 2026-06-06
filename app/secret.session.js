@@ -531,7 +531,7 @@
 
     if (host === 'localhost' || host === '127.0.0.1') {
       repoOwner = login;
-      repoName = 'daily-paper-reader';
+      repoName = 'latest-paper-reader';
     } else {
       const githubPagesMatch = currentUrl.match(
         /https?:\/\/([^.]+)\.github\.io\/([^\/]+)/,

@@ -4,10 +4,10 @@
 window.DPRWorkflowRunner = (function () {
   const WORKFLOWS = [
     {
-      key: 'daily-now',
-      id: 'daily-paper-reader.yml',
+      key: 'latest-now',
+      id: 'latest-paper-reader.yml',
       name: '立即爬取并处理论文',
-      desc: '触发 daily-paper-reader 工作流（抓取→召回→重排→生成 docs）。',
+      desc: '触发 latest-paper-reader 工作流（抓取→召回→重排→生成 docs）。',
       dispatchInputs: {
         run_enrich: 'false',
       },
@@ -41,14 +41,14 @@ window.DPRWorkflowRunner = (function () {
 
   const QUICK_FETCH_PRESETS = {
     '10': {
-      key: 'daily-now',
+      key: 'latest-now',
       dispatchInputs: {
         run_enrich: 'false',
         fetch_days: '10',
       },
     },
     '30': {
-      key: 'daily-now',
+      key: 'latest-now',
       dispatchInputs: {
         run_enrich: 'false',
         fetch_days: '30',
@@ -56,7 +56,7 @@ window.DPRWorkflowRunner = (function () {
       },
     },
     '30-skims': {
-      key: 'daily-now',
+      key: 'latest-now',
       dispatchInputs: {
         run_enrich: 'false',
         fetch_days: '30',
@@ -64,7 +64,7 @@ window.DPRWorkflowRunner = (function () {
       },
     },
     '30-standard': {
-      key: 'daily-now',
+      key: 'latest-now',
       dispatchInputs: {
         run_enrich: 'false',
         fetch_days: '30',
@@ -136,14 +136,14 @@ window.DPRWorkflowRunner = (function () {
       return { owner: githubPagesMatch[1], repo: githubPagesMatch[2] };
     }
 
-    // 非 GitHub Pages URL：回退到「Token 对应的用户 + daily-paper-reader」作为默认目标仓库
+    // 非 GitHub Pages URL：回退到「Token 对应的用户 + latest-paper-reader」作为默认目标仓库
     try {
       const userRes = await ghFetch(token, 'https://api.github.com/user');
       if (userRes.ok) {
         const user = await userRes.json();
         const login = (user && user.login) ? String(user.login) : '';
         if (login) {
-          return { owner: login, repo: 'daily-paper-reader' };
+          return { owner: login, repo: 'latest-paper-reader' };
         }
       }
     } catch {
@@ -378,11 +378,11 @@ window.DPRWorkflowRunner = (function () {
   };
 
   const resolveRecentRunTag = async (owner, repo, token, run) => {
-    if (!run) return 'daily-now';
-    // 统一归类到 daily-now，触发面板不再单独展示一个月/一个月标准入口
-    if (run.inputs && typeof run.inputs === 'object') return 'daily-now';
+    if (!run) return 'latest-now';
+    // 统一归类到 latest-now，触发面板不再单独展示一个月/一个月标准入口
+    if (run.inputs && typeof run.inputs === 'object') return 'latest-now';
     await resolveWorkflowRunInputs(owner, repo, token, run.id);
-    return 'daily-now';
+    return 'latest-now';
   };
 
   const setStatus = (text, color, options = {}) => {
@@ -646,23 +646,23 @@ window.DPRWorkflowRunner = (function () {
           : [];
       }
 
-      const dailyFileRuns = runsByWorkflowId['daily-paper-reader.yml'] || [];
-      const dailyNowRuns = [];
-      if (dailyFileRuns.length > 0) {
+      const latestFileRuns = runsByWorkflowId['latest-paper-reader.yml'] || [];
+      const latestNowRuns = [];
+      if (latestFileRuns.length > 0) {
         const tagged = await Promise.all(
-          dailyFileRuns.map((run) =>
+          latestFileRuns.map((run) =>
             resolveRecentRunTag(owner, repo, token, run).then((runTag) => ({ run, runTag })),
           ),
         );
         tagged.forEach(({ run }) => {
-          dailyNowRuns.push(run);
+          latestNowRuns.push(run);
         });
       }
 
       WORKFLOWS.forEach((wf) => {
         const wfId = String(wf.id || '');
-        if (wf.id === 'daily-paper-reader.yml' && wf.key === 'daily-now') {
-          byWorkflow[String(wf.key)] = dailyNowRuns.slice(0, 3);
+        if (wf.id === 'latest-paper-reader.yml' && wf.key === 'latest-now') {
+          byWorkflow[String(wf.key)] = latestNowRuns.slice(0, 3);
           return;
         }
         byWorkflow[String(wf.key || wfId)] = (runsByWorkflowId[wfId] || []).slice(0, 3);
@@ -707,7 +707,7 @@ window.DPRWorkflowRunner = (function () {
     const rerankerProfile = loadRerankerProfile();
     if (
       rerankerProfile &&
-      (workflowFile === 'daily-paper-reader.yml' ||
+      (workflowFile === 'latest-paper-reader.yml' ||
         workflowFile === 'conference-paper-retrieval.yml')
     ) {
       dynamicInputs.reranker_profile = rerankerProfile;
@@ -1007,7 +1007,7 @@ window.DPRWorkflowRunner = (function () {
     const fetchMode = (typeof options.fetchMode === 'string' ? options.fetchMode : '').trim().toLowerCase();
     const presetKey = fetchMode ? `${normalized}-${fetchMode}` : normalized;
     const preset = QUICK_FETCH_PRESETS[presetKey] || QUICK_FETCH_PRESETS[normalized] || {
-      key: 'daily-now',
+      key: 'latest-now',
       dispatchInputs: {
         run_enrich: 'false',
         fetch_days: normalized,

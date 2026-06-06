@@ -1966,8 +1966,8 @@ window.SubscriptionsSmartQuery = (function () {
         ].filter(Boolean).join(' ');
         const isDailyEnabled = !isTemporary && !isPaused;
         const dailyBadge = isDailyEnabled
-          ? '<span class="dpr-entry-daily-badge dpr-entry-daily-badge--active">日常</span>'
-          : '<span class="dpr-entry-daily-badge dpr-entry-daily-badge--off">停用日常</span>';
+          ? '<span class="dpr-entry-daily-badge dpr-entry-daily-badge--active">前沿</span>'
+          : '<span class="dpr-entry-daily-badge dpr-entry-daily-badge--off">停用前沿</span>';
         const selectionControl = `<span class="dpr-entry-select-dot" aria-hidden="true">${selected ? '✓' : ''}</span>`;
         return `
           <div class="${cardClass}" data-profile-id="${profileId}">
@@ -2871,7 +2871,7 @@ window.SubscriptionsSmartQuery = (function () {
     renderMain();
   };
   const setRunSelectionMode = (mode, onSelectionChange) => {
-    runSelectionMode = mode === 'conference' || mode === 'daily' ? mode : '';
+    runSelectionMode = mode === 'conference' || mode === 'latest' ? mode : '';
     selectionChangeHandler = typeof onSelectionChange === 'function' ? onSelectionChange : null;
     renderMain();
     notifySelectionChange();

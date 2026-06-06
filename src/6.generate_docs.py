@@ -870,7 +870,7 @@ def ensure_home_module_files(docs_dir: str) -> Tuple[str, str]:
     if not os.path.exists(notice_path):
         with open(notice_path, "w", encoding="utf-8") as f:
             f.write("────────────────────────────────────────\n")
-            f.write("（公告占位）欢迎使用 Daily Paper Reader。\n")
+            f.write("（公告占位）欢迎使用 Latest Paper Reader。\n")
             f.write("（公告占位）可在此放置本周更新、维护通知等。\n")
             f.write("────────────────────────────────────────\n")
     if not os.path.exists(promo_path):
@@ -926,7 +926,7 @@ def _entry_score_text(tags: List[Tuple[str, str]]) -> str:
     return ""
 
 
-def build_daily_brief_summary(
+def build_latest_brief_summary(
     date_label: str,
     deep_entries: List[Tuple[str, str, List[Tuple[str, str]]]],
     quick_entries: List[Tuple[str, str, List[Tuple[str, str]]]],
@@ -934,7 +934,7 @@ def build_daily_brief_summary(
     run_status: str,
 ) -> str:
     if total_count == 0:
-        return "> 今日无新推荐，系统未产出可展示论文。"
+        return "> 目前无新推荐，系统未产出可展示论文。"
 
     def _format_preview_item(paper_id: str, title: str, tags: List[Tuple[str, str]]) -> str:
         name = ((title or "").strip() or paper_id)
@@ -951,11 +951,11 @@ def build_daily_brief_summary(
     if not highlight:
         return (
             f"- 状态：{run_status}。\n"
-            f"- 已完成今日生成，共收录 {total_count} 篇（精读 {len(deep_entries)} 篇，速读 {len(quick_entries)} 篇）。"
+            f"- 已生成最新推荐，共收录 {total_count} 篇（精读 {len(deep_entries)} 篇，速读 {len(quick_entries)} 篇）。"
         )
 
     fallback = (
-        f"- 今日共生成 {total_count} 篇推荐（精读 {len(deep_entries)} 篇，速读 {len(quick_entries)} 篇）\n"
+        f"- 共生成 {total_count} 篇推荐（精读 {len(deep_entries)} 篇，速读 {len(quick_entries)} 篇）\n"
         + "\n".join(highlight)
         + "\n- 这些结果覆盖了当下较热的方向，建议先看精读区论文的关键问题与方法。"
     )
@@ -1026,7 +1026,7 @@ def build_latest_report_section(
     effective_label = (date_label or "").strip() or format_date_str(date_str)
     run_status = "成功" if recommend_exists else "未产出 recommend 文件（视为无结果）"
     total = len(deep_entries) + len(quick_entries)
-    summary = build_daily_brief_summary(
+    summary = build_latest_brief_summary(
         date_label=effective_label,
         deep_entries=deep_entries,
         quick_entries=quick_entries,
@@ -1043,7 +1043,7 @@ def build_latest_report_section(
     lines.append(f"- 速读区：{len(quick_entries)}")
     if summary:
         lines.append("")
-        lines.append("### 今日简报（AI）")
+        lines.append("### 最新简报（AI）")
         lines.append(summary)
     if RANGE_DATE_RE.match(date_str):
         report_href = build_docsify_id_href(f"{date_str}/README")
@@ -1753,19 +1753,19 @@ def update_sidebar(
         with open(sidebar_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-    daily_idx = -1
+    latest_idx = -1
     for i, line in enumerate(lines):
-        if line.strip().startswith("* Daily Papers"):
-            daily_idx = i
+        if line.strip().startswith("* Latest Papers"):
+            latest_idx = i
             break
-    if daily_idx == -1:
+    if latest_idx == -1:
         if not any("[首页]" in line for line in lines):
             lines.append("* [首页](/)\n")
-        lines.append("* Daily Papers\n")
-        daily_idx = len(lines) - 1
+        lines.append("* Latest Papers\n")
+        latest_idx = len(lines) - 1
 
     day_idx = -1
-    for i in range(daily_idx + 1, len(lines)):
+    for i in range(latest_idx + 1, len(lines)):
         line = lines[i]
         if line.startswith("* "):
             break
@@ -1810,11 +1810,11 @@ def update_sidebar(
                 f'<a class="dpr-sidebar-item-link dpr-sidebar-item-structured" href="{href}" data-sidebar-item="{payload_json}">{safe_title}</a>\n'
             )
 
-    insert_idx = daily_idx + 1
+    insert_idx = latest_idx + 1
     lines[insert_idx:insert_idx] = block
 
     # 清理历史 Sidebar 中遗留的“日报”入口
-    i = daily_idx + 1
+    i = latest_idx + 1
     while i < len(lines):
         line = lines[i]
         if line.startswith("* "):
@@ -1839,7 +1839,7 @@ def build_day_report_markdown(
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     total = len(deep_entries) + len(quick_entries)
     run_status = "成功" if recommend_exists else "未产出 recommend 文件（视为无结果）"
-    summary = build_daily_brief_summary(
+    summary = build_latest_brief_summary(
         date_label=effective_label,
         deep_entries=deep_entries,
         quick_entries=quick_entries,
@@ -2015,7 +2015,7 @@ def get_paper_sidebar_evidence(paper: Dict[str, Any]) -> str:
     return str(paper.get("canonical_evidence") or "").strip()
 
 
-def write_run_daily_log(
+def write_run_latest_log(
     date_str: str,
     mode: str,
     recommend_path: str,
@@ -2027,7 +2027,7 @@ def write_run_daily_log(
 ) -> str:
     log_dir = os.path.join(ROOT_DIR, "archive", date_str, "logs")
     os.makedirs(log_dir, exist_ok=True)
-    out_path = os.path.join(log_dir, "daily_report.json")
+    out_path = os.path.join(log_dir, "latest_report.json")
     payload = {
         "date": format_date_str(date_str),
         "mode": mode,
@@ -2721,7 +2721,7 @@ def main() -> None:
     log_substep("6.6", "生成可下载元数据索引（JSON）", "END")
 
     log_substep("6.7", "写入运行日志（日报）", "START")
-    run_log = write_run_daily_log(
+    run_log = write_run_latest_log(
         date_str=date_str,
         mode=mode,
         recommend_path=recommend_path,
@@ -2731,7 +2731,7 @@ def main() -> None:
         docs_dir=docs_dir,
         day_readme=day_readme,
     )
-    log(f"[OK] daily report log saved: {run_log}")
+    log(f"[OK] latest report log saved: {run_log}")
     log_substep("6.7", "写入运行日志（日报）", "END")
 
     log(f"[OK] docs updated: {docs_dir}")

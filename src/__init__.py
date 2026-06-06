@@ -1,1 +1,1 @@
-"""Daily Paper Reader 源码包。"""
+"""Latest Paper Reader 源码包。"""

@@ -5,9 +5,9 @@ import yaml
 
 
 class ConferenceWorkflowAndUiTest(unittest.TestCase):
-    def test_daily_workflow_uses_fast_rerank_budget(self):
+    def test_latest_workflow_uses_fast_rerank_budget(self):
         root = pathlib.Path(__file__).resolve().parents[1]
-        workflow_path = root / ".github" / "workflows" / "daily-paper-reader.yml"
+        workflow_path = root / ".github" / "workflows" / "latest-paper-reader.yml"
         text = workflow_path.read_text(encoding="utf-8")
 
         self.assertIn("MKL_THREADING_LAYER: GNU", text)

@@ -258,7 +258,7 @@ def as_bool(value: Any, default: bool = False) -> bool:
 
 def build_command(workflow_key: str, workflow_file: str, inputs: dict[str, str]) -> list[str]:
     python = sys.executable
-    if workflow_file == "daily-paper-reader.yml" or workflow_key == "daily-now":
+    if workflow_file == "latest-paper-reader.yml" or workflow_key == "latest-now":
         cmd = [python, "src/main.py"]
         if as_bool(inputs.get("run_enrich"), False):
             cmd.append("--run-enrich")
@@ -476,7 +476,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Daily Paper Reader 本地调试后端")
+    parser = argparse.ArgumentParser(description="Latest Paper Reader 本地调试后端")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8567)
     args = parser.parse_args()

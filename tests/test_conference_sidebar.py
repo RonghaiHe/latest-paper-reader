@@ -100,7 +100,7 @@ class ConferenceSidebarTest(unittest.TestCase):
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
             result = tmp_path / "conference-icml-2025.supabase.llm.json"
-            sidebar.write_text("* <a class=\"dpr-sidebar-root-link\" href=\"#/\">首页</a>\n* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* <a class=\"dpr-sidebar-root-link\" href=\"#/\">首页</a>\n* Latest Papers\n", encoding="utf-8")
             self.write_result(result)
 
             self.mod.update_sidebar_with_conference(sidebar, result, docs_dir=tmp_path / "docs", deep_min_score=-1)
@@ -119,7 +119,7 @@ class ConferenceSidebarTest(unittest.TestCase):
             self.assertNotIn("&quot;label&quot;: &quot;ICML&quot;", text)
             self.assertNotIn("&quot;label&quot;: &quot;2025&quot;", text)
             self.assertNotIn("rl:composite", text)
-            self.assertIn("* Daily Papers", text)
+            self.assertIn("* Latest Papers", text)
             paper_md = tmp_path / "docs" / "conference" / "icml-2025" / "openreview-icml-2025-abc123-a-conference-paper.md"
             self.assertTrue(paper_md.exists())
             md_text = paper_md.read_text(encoding="utf-8")
@@ -188,7 +188,7 @@ class ConferenceSidebarTest(unittest.TestCase):
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
             result = tmp_path / "conference-icml-2025.supabase.llm.json"
-            sidebar.write_text("* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* Latest Papers\n", encoding="utf-8")
 
             self.write_result(result, title="First Title")
             self.mod.update_sidebar_with_conference(sidebar, result, docs_dir=tmp_path / "docs", deep_min_score=-1)
@@ -206,7 +206,7 @@ class ConferenceSidebarTest(unittest.TestCase):
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
             result = tmp_path / "conference-icml-2025.supabase.llm.json"
-            sidebar.write_text("* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* Latest Papers\n", encoding="utf-8")
             payload = {
                 "papers": [
                     {
@@ -247,7 +247,7 @@ class ConferenceSidebarTest(unittest.TestCase):
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
             result = tmp_path / "conference-icml-2025.supabase.llm.json"
-            sidebar.write_text("* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* Latest Papers\n", encoding="utf-8")
 
             self.write_result(result, title="RL Topic Paper")
             self.mod.update_sidebar_with_conference(sidebar, result, docs_dir=tmp_path / "docs", deep_min_score=-1)
@@ -273,7 +273,7 @@ class ConferenceSidebarTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
-            sidebar.write_text("* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* Latest Papers\n", encoding="utf-8")
 
             result_2025 = tmp_path / "conference-icml-2025.supabase.llm.json"
             result_2024 = tmp_path / "conference-icml-2024.supabase.llm.json"
@@ -308,7 +308,7 @@ class ConferenceSidebarTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = pathlib.Path(tmp)
             sidebar = tmp_path / "_sidebar.md"
-            sidebar.write_text("* Daily Papers\n", encoding="utf-8")
+            sidebar.write_text("* Latest Papers\n", encoding="utf-8")
 
             cases = [
                 (

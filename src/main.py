@@ -506,7 +506,7 @@ def print_trace_recommend(stage: str, path: str, trace_ids: list[str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Daily Paper Reader pipeline (steps 0~6).",
+        description="Latest Paper Reader pipeline (steps 0~6).",
     )
     parser.add_argument(
         "--run-enrich",

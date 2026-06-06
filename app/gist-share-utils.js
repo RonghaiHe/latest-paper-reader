@@ -155,7 +155,7 @@
     const pageUrl = paperId ? `${String(origin || '').replace(/\/+$/, '')}/#/${paperId}` : '';
     const parsed = stripFrontMatter(pageMd || '');
 
-    parts.push('<!-- Shared by Daily Paper Reader -->');
+    parts.push('<!-- Shared by Latest Paper Reader -->');
     parts.push('');
     parts.push(buildMetaSection(parsed.meta, pageUrl, generatedAt || new Date().toISOString()));
     parts.push('');

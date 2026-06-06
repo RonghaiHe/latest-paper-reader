@@ -2,7 +2,7 @@
 
 ## Skills 封装
 
-- [ ] 新增项目内 skill：`.codex/skills/maintain-daily-paper-reader/SKILL.md`
+- [ ] 新增项目内 skill：`.codex/skills/maintain-latest-paper-reader/SKILL.md`
 - [ ] 在 skill 中沉淀仓库维护工作流：抓取、召回、排序、文档生成、前端工作流面板
 - [ ] 明确 skill 使用边界：只读排查、流水线修改、workflow 修改、docs 生成修改
 - [ ] 视稳定程度决定是否补充 `agents/openai.yaml`

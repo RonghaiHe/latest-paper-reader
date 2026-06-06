@@ -1,23 +1,23 @@
 <p align="center">
-  <img src="others/LOGO.png" alt="Daily Paper Reader Logo" width="720" />
+  <img src="others/LOGO.png" alt="Latest Paper Reader Logo" width="720" />
 </p>
 
-<h2 align="center">Your Daily Companion for Discovering and Reading AI Papers</h2>
+<h2 align="center">Your Companion for Discovering and Reading AI Papers</h2>
 
 <p align="center">
-  <a href="https://github.com/ziwenhahaha/daily-paper-reader/stargazers">
-    <img src="https://img.shields.io/github/stars/ziwenhahaha/daily-paper-reader?style=flat-square" alt="Stars" />
+  <a href="https://github.com/ziwenhahaha/latest-paper-reader/stargazers">
+    <img src="https://img.shields.io/github/stars/ziwenhahaha/latest-paper-reader?style=flat-square" alt="Stars" />
   </a>
-  <a href="https://github.com/ziwenhahaha/daily-paper-reader/network/members">
-    <img src="https://img.shields.io/github/forks/ziwenhahaha/daily-paper-reader?style=flat-square" alt="Forks" />
+  <a href="https://github.com/ziwenhahaha/latest-paper-reader/network/members">
+    <img src="https://img.shields.io/github/forks/ziwenhahaha/latest-paper-reader?style=flat-square" alt="Forks" />
   </a>
-  <a href="https://github.com/ziwenhahaha/daily-paper-reader/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/ziwenhahaha/daily-paper-reader?style=flat-square" alt="License" />
+  <a href="https://github.com/ziwenhahaha/latest-paper-reader/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/ziwenhahaha/latest-paper-reader?style=flat-square" alt="License" />
   </a>
-  <a href="https://ziwenhahaha.github.io/daily-paper-reader">
+  <a href="https://ziwenhahaha.github.io/latest-paper-reader">
     <img src="https://img.shields.io/badge/Demo-GitHub%20Pages-2ea44f?style=flat-square" alt="Demo" />
   </a>
-  <a href="https://ziwenhahaha.github.io/daily-paper-reader/#/tutorial/README">
+  <a href="https://ziwenhahaha.github.io/latest-paper-reader/#/tutorial/README">
     <img src="https://img.shields.io/badge/Docs-Quick%20Start-blue?style=flat-square" alt="Docs" />
   </a>
 </p>
@@ -26,11 +26,11 @@
 
 ## 🖼️ 界面预览
 <p align="center">
-  <img src="others/demo1.png" alt="Daily Paper Reader 界面预览 1" width="80%" />
+  <img src="others/demo1.png" alt="Latest Paper Reader 界面预览 1" width="80%" />
 </p>
 <p align="center">
-  <img src="others/demo2.png" alt="Daily Paper Reader 界面预览 2" width="40%" />
-  <img src="others/demo3.png" alt="Daily Paper Reader 界面预览 3" width="40%" />
+  <img src="others/demo2.png" alt="Latest Paper Reader 界面预览 2" width="40%" />
+  <img src="others/demo3.png" alt="Latest Paper Reader 界面预览 3" width="40%" />
 </p>
 
 ## 📰 News
@@ -68,7 +68,7 @@
 - **2026-03-10** 📝 更新 README 快速启动指引与 Fork 按钮样式，优化新手进入项目时的操作路径与展示细节。
 - **2026-03-09** 📚 对齐 Zotero 一键保存链路到当前摘要结构，补齐聊天区写入，并清理 Attention 样本里的旧版摘要结构。
 - **2026-03-09** 🖼️ 更新 README 多图界面预览与新手引导文案，并修复 gist 分享时摘要前的格式异常。
-- **2026-03-08** 🛡️ 优化 `daily pipeline` 提交与推送逻辑，提交后先同步远端再 push，降低用户更新配置时的冲突概率。
+- **2026-03-08** 🛡️ 优化 `latest pipeline` 提交与推送逻辑，提交后先同步远端再 push，降低用户更新配置时的冲突概率。
 - **2026-03-07** 🎨 更新首页与 README 展示文案，补充界面预览图，完善项目对外说明。
 - **2026-03-06** 🛠️ 修复 LLM refine 补分与组合 query 打分逻辑，并补上回归测试；新增首页使用教程入口并修复移动端导航与教程路由。
 - **2026-03-05** 🚀 后台面板新增 30 天标准快速抓取入口，加入指定 arXiv 论文逐阶段命中追踪；向量召回改为 exact 优先并增加 ANN 低密度回退。
@@ -78,7 +78,7 @@
 - **2026-02-07** 🎛️ 优化后台管理面板交互与布局，订阅面板向单路多关键词召回演进。
 - **2026-02-06** 🧠 重构推荐链路，引入 smart query、布尔检索与订阅规划模块，并补上对应测试。
 - **2026-01-24** 👀 新增 workflow 监视面板，便于直接查看后台任务运行状态。
-- **2026-01-11** 📝 补齐第 6 步论文总结模块，打通每日推荐结果到文档生成的闭环。
+- **2026-01-11** 📝 补齐第 6 步论文总结模块，打通前沿推荐结果到文档生成的闭环。
 - **2026-01-10** 🧱 推荐系统大改版，alias 统一为 tag，召回、排序与 LLM refine 链路拆分成独立步骤。
 
 </details>
@@ -94,9 +94,9 @@
 
 </details>
 
-## ✨ Why Daily Paper Reader?
+## ✨ Why Latest Paper Reader?
 
-- **🔎 Daily Paper Radar**：每日自动抓取 arXiv / OpenReview 新论文，持续追踪研究前沿。
+- **🔎 Latest Paper Radar**：前沿自动抓取 arXiv / OpenReview 新论文，持续追踪研究前沿。
 - **🎯 Personalized Feed**：基于关键词、研究方向与兴趣生成个性化推荐流。
 - **📖 Read in Context**：支持摘要、原文、速览、长总结在同一页面串联阅读。
 - **💬 Ask While Reading**：支持 AI 论文问答，边读边问，沉淀私人讨论记录。
@@ -113,7 +113,7 @@
 
 ## ⚙️ Workflow Architecture
 
-![Daily Paper Reader 双链路工作流图](others/structure.png)
+![Latest Paper Reader 双链路工作流图](others/structure.png)
 
 ## 🚀 5 分钟快速启动
 
@@ -137,12 +137,12 @@
 - ✅ `gist`
 
 ### 3) 🍴 Fork 本仓库
-- Fork 到自己的 GitHub 账号下 <a href="https://github.com/ziwenhahaha/daily-paper-reader/fork"><img src="https://img.shields.io/badge/Fork%20on-GitHub-24292f?style=flat&logo=github" alt="Fork on GitHub" height="20" align="absmiddle" /></a>
-- 建议仓库名保持 `daily-paper-reader` 不变
+- Fork 到自己的 GitHub 账号下 <a href="https://github.com/ziwenhahaha/latest-paper-reader/fork"><img src="https://img.shields.io/badge/Fork%20on-GitHub-24292f?style=flat&logo=github" alt="Fork on GitHub" height="20" align="absmiddle" /></a>
+- 建议仓库名保持 `latest-paper-reader` 不变
 
 ### 4) ▶️ 开启 GitHub Actions
 
-进入你 Fork 的仓库，点击顶部 [`Actions`](../../actions)，启用 `daily-paper-reader` 工作流。
+进入你 Fork 的仓库，点击顶部 [`Actions`](../../actions)，启用 `latest-paper-reader` 工作流。
 
 ### 5) 🌍 开启 GitHub Pages
 
@@ -159,10 +159,10 @@
 访问：
 
 ```text
-https://<你的用户名>.github.io/daily-paper-reader
+https://<你的用户名>.github.io/latest-paper-reader
 ```
 
-完成以上步骤后，后续大多数日常使用和配置都可以直接在网页端完成。后续教程参考：[daily-paper-reader 指引](https://ziwenhahaha.github.io/daily-paper-reader/#/tutorial/README)
+完成以上步骤后，后续大多数日常使用和配置都可以直接在网页端完成。后续教程参考：[latest-paper-reader 指引](https://ziwenhahaha.github.io/latest-paper-reader/#/tutorial/README)
 
 ## 🧪 本地调试模式
 
@@ -214,7 +214,7 @@ DPR_INSTALL_MODE=full scripts/bootstrap_local.sh
 DPR_INSTALL_MODE=full DPR_TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu scripts/bootstrap_local.sh
 ```
 
-在 `localhost / 127.0.0.1` 页面里点击“触发工作流”时，前端会自动调用本地后端 `/api/local/workflows/dispatch`，把 `daily-paper-reader.yml`、`conference-paper-retrieval.yml` 等映射为本地 Python 子进程执行，不会上 GitHub，也不会要求启用 Actions。运行日志会显示在工作流面板里，并保存在 `.local-runs/`。
+在 `localhost / 127.0.0.1` 页面里点击“触发工作流”时，前端会自动调用本地后端 `/api/local/workflows/dispatch`，把 `latest-paper-reader.yml`、`conference-paper-retrieval.yml` 等映射为本地 Python 子进程执行，不会上 GitHub，也不会要求启用 Actions。运行日志会显示在工作流面板里，并保存在 `.local-runs/`。
 
 如果前端和本地后端不是同一个地址，可以在页面加载前设置：
 
@@ -234,7 +234,7 @@ DPR_LOCAL_HOST=0.0.0.0 DPR_LOCAL_PORT=8567 scripts/local_debug.sh
 
 ## 🙏 致谢
 
-Daily Paper Reader 的论文发现、重排与阅读增强链路受益于以下开源项目、模型与服务：
+Latest Paper Reader 的论文发现、重排与阅读增强链路受益于以下开源项目、模型与服务：
 
 - **[PaperCropper](https://github.com/fake-learn/PaperCropper)**：为论文 PDF 中的图表检测与裁剪提供了重要参考和能力基础，让论文详情页可以更自然地展示图表内容。
 - **[BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5)**：作为默认 embedding 模型之一，支撑语义召回、会议论文检索与查询向量复用。
@@ -264,4 +264,4 @@ QQ 群：583867967（欢迎交流，已有：1151 人）
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ziwenhahaha/daily-paper-reader&type=Date&showForks=true)](https://star-history.com/#ziwenhahaha/daily-paper-reader&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=ziwenhahaha/latest-paper-reader&type=Date&showForks=true)](https://star-history.com/#ziwenhahaha/latest-paper-reader&Date)

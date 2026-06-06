@@ -44,7 +44,7 @@ jobs:
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
         with:
           # 👇 【重要】这里写死你的源仓库地址 (Developer's Repo)
-          upstream_sync_repo: ziwenhahaha/daily-paper-reader
+          upstream_sync_repo: ziwenhahaha/latest-paper-reader
           upstream_sync_branch: main
           target_sync_branch: main
           target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 自动生成，无需用户配置

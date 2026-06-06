@@ -34,7 +34,7 @@ git status --short
   - `.gitignore`
   - `README.md`
   - `AGENTS.md`
-- 默认不得合并以下用户运行态/每日生成产物路径，除非用户明确要求且已说明会影响 fork 用户的 `Sync fork` 风险：
+- 默认不得合并以下用户运行态/前沿生成产物路径，除非用户明确要求且已说明会影响 fork 用户的 `Sync fork` 风险：
   - `config.yaml`
   - `docs/config.yaml`
   - `docs/README.md`

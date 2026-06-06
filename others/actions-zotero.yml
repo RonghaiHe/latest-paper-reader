@@ -165,10 +165,10 @@ actions:
               continue;
             }
           }
-          if (!started && /^> 由 daily-paper-reader 自动生成/i.test(t)) {
+          if (!started && /^> 由 latest-paper-reader 自动生成/i.test(t)) {
             continue;
           }
-          if (!started && t.includes("daily-paper-reader 自动生成")) {
+          if (!started && t.includes("latest-paper-reader 自动生成")) {
             continue;
           }
           started = true;
@@ -869,7 +869,7 @@ actions:
             }
             const title = normalizeText(note.getNoteTitle ? note.getNoteTitle() : "")
               .toLowerCase();
-            if (title.includes("ai summary") || title.includes("daily-paper")) {
+            if (title.includes("ai summary") || title.includes("latest-paper")) {
               return true;
             }
             const noteHtml = normalizeText(note.getNote()).toLowerCase();
@@ -909,7 +909,7 @@ actions:
               const noteHtml = normalizeText(note.getNote()).toLowerCase();
               const isAuto =
                 title.includes("ai summary") ||
-                title.includes("daily-paper") ||
+                title.includes("latest-paper") ||
                 noteHtml.includes("🤖 ai summary") ||
                 noteHtml.includes("📄 original abstract");
               if (!isAuto) {

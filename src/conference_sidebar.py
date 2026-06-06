@@ -827,12 +827,12 @@ def ensure_conference_heading(lines: List[str]) -> int:
     if heading_idx >= 0:
         return heading_idx
 
-    daily_idx = -1
+    latest_idx = -1
     for idx, line in enumerate(lines):
-        if line.strip() == "* Daily Papers":
-            daily_idx = idx
+        if line.strip() == "* Latest Papers":
+            latest_idx = idx
             break
-    insert_idx = daily_idx if daily_idx >= 0 else len(lines)
+    insert_idx = latest_idx if latest_idx >= 0 else len(lines)
     if insert_idx > 0 and lines[insert_idx - 1].strip():
         lines.insert(insert_idx, "\n")
         insert_idx += 1

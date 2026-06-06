@@ -1,6 +1,6 @@
 // Docsify 配置与公共插件（评论区 + Zotero 元数据）
 window.$docsify = {
-  name: 'Daily Paper Reader',
+  name: 'Latest Paper Reader',
   repo: '',
   // 文档内容与侧边栏都存放在 docs/ 下
   basePath: 'docs/', // 所有 Markdown 路由以 docs/ 为前缀
@@ -38,14 +38,14 @@ window.$docsify = {
       };
 
       const metaFallbacks = {
-        citation_title: 'Daily Paper Reader Default Entry',
+        citation_title: 'Latest Paper Reader Default Entry',
         citation_journal_title: 'arxiv',
-        citation_pdf_url: 'https://daily-paper-reader.invalid/default.pdf',
+        citation_pdf_url: 'https://latest-paper-reader.invalid/default.pdf',
         citation_publication_date: '2024-01-01',
         citation_date: '2024/01/01',
       };
 
-      const defaultAuthors = ['Daily Paper Reader Team', 'Docsify Renderer'];
+      const defaultAuthors = ['Latest Paper Reader Team', 'Docsify Renderer'];
 
       // Zotero 摘要结构标记：方便后续在 Zotero 插件中重新解析
       const START_MARKER = '【🤖 AI Summary】';
@@ -137,7 +137,7 @@ window.$docsify = {
           '',
         );
         text = text.replace(/^Tags:\s*.*$/gim, '');
-        text = text.replace(/^>?\s*由\s*daily-paper-reader\s*自动生成\s*$/gim, '');
+        text = text.replace(/^>?\s*由\s*latest-paper-reader\s*自动生成\s*$/gim, '');
         return text.trim();
       };
 
@@ -1472,7 +1472,7 @@ window.$docsify = {
           const { li: rowLi, rawText: rowText } = opts || {};
           const dayPaperItems = collectDayPaperItems(rowLi);
           const payload = {
-            label: String(rowText || 'daily-papers').trim(),
+            label: String(rowText || 'latest-papers').trim(),
             date: String(rowText || '').trim(),
             generated_at: new Date().toISOString(),
             count: 0,
@@ -1535,12 +1535,12 @@ window.$docsify = {
             payload.count = payload.papers.length;
             window.DPRLastDayExport = payload;
 
-            const safeLabel = String(payload.label || 'daily-papers')
+            const safeLabel = String(payload.label || 'latest-papers')
               .replace(/\s+/g, ' ')
               .trim()
               .replace(/[^\d\-~_ ]/g, '')
               .replace(/\s+/g, '_');
-            const filename = `${safeLabel || 'daily-papers'}.json`;
+            const filename = `${safeLabel || 'latest-papers'}.json`;
             downloadJson(filename, payload);
 
             if (rowLi) {
@@ -2277,7 +2277,7 @@ window.$docsify = {
         const pageUrl = `${String(window.location.origin || '').replace(/\/+$/, '')}/#/${paperId}`;
         const parts = [];
 
-        parts.push('<!-- Shared by Daily Paper Reader -->');
+        parts.push('<!-- Shared by Latest Paper Reader -->');
         parts.push('');
         parts.push(`# ${heading}`);
         if (subtitle) {
@@ -2399,7 +2399,7 @@ window.$docsify = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            description: '论文分享（Daily Paper Reader）',
+            description: '论文分享（Latest Paper Reader）',
             public: false,
             files: {
               [filename]: { content },

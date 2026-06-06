@@ -42,7 +42,7 @@ function testBuildShareMarkdownRemovesFrontMatterAndBuildsHeader() {
       { role: 'user', time: '10:00', content: '这篇论文的核心贡献是什么？' },
       { role: 'ai', time: '10:01', content: '核心是提出 Transformer。' },
     ],
-    origin: 'https://ziwenhahaha.github.io/daily-paper-reader',
+    origin: 'https://ziwenhahaha.github.io/latest-paper-reader',
     generatedAt: '2026-03-09T08:00:00.000Z',
   });
 

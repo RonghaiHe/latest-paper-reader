@@ -1,4 +1,4 @@
-name: daily-paper-reader
+name: latest-paper-reader
 
 on:
   schedule:
@@ -30,7 +30,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: daily-paper-reader
+  group: latest-paper-reader
   cancel-in-progress: false
 
 jobs:
@@ -288,7 +288,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "[chore] daily pipeline"
+          git commit -m "[chore] latest pipeline"
 
           git status --short
           git reset --hard HEAD

@@ -37,7 +37,7 @@ window.SubscriptionsManager = (function () {
   let adminConferenceTabBtn = null;
   let adminDailyPanel = null;
   let adminConferencePanel = null;
-  let activeAdminPanelTab = 'daily';
+  let activeAdminPanelTab = 'latest';
 
   let draftConfig = null;
   let hasUnsavedChanges = false;
@@ -540,12 +540,12 @@ window.SubscriptionsManager = (function () {
   const renderProfilePicker = (targetEl, mode) => {
     if (!targetEl) return;
     const profiles = getProfilesForRun();
-    const filtered = mode === 'daily'
+    const filtered = mode === 'latest'
       ? profiles
       : profiles;
     if (!filtered.length) {
       targetEl.innerHTML = `<div class="dpr-profile-picker-empty">${
-        mode === 'daily' ? '暂无可快速抓取的词条。' : '暂无可检索的词条。'
+        mode === 'latest' ? '暂无可快速抓取的词条。' : '暂无可检索的词条。'
       }</div>`;
       return;
     }
@@ -569,7 +569,7 @@ window.SubscriptionsManager = (function () {
     }).join('');
   };
   const renderProfilePickers = () => {
-    renderProfilePicker(dailyProfilePickerEl, 'daily');
+    renderProfilePicker(dailyProfilePickerEl, 'latest');
     renderProfilePicker(conferenceProfilePickerEl, 'conference');
   };
   const setProfileSelection = (profileId, selected) => {
@@ -591,7 +591,7 @@ window.SubscriptionsManager = (function () {
           normalizeText(profile.scope).toLowerCase() === 'conference'
         )
       );
-      if (mode === 'daily') return true;
+      if (mode === 'latest') return true;
       return true;
     }, selected);
   };
@@ -702,9 +702,9 @@ window.SubscriptionsManager = (function () {
   };
 
   const syncAdminPanelTabs = () => {
-    const active = activeAdminPanelTab === 'conference' ? 'conference' : 'daily';
+    const active = activeAdminPanelTab === 'conference' ? 'conference' : 'latest';
     [
-      [adminDailyTabBtn, active === 'daily'],
+      [adminDailyTabBtn, active === 'latest'],
       [adminConferenceTabBtn, active === 'conference'],
     ].forEach(([btn, isActive]) => {
       if (!btn) return;
@@ -713,7 +713,7 @@ window.SubscriptionsManager = (function () {
     });
 
     if (adminDailyPanel) {
-      adminDailyPanel.hidden = active !== 'daily';
+      adminDailyPanel.hidden = active !== 'latest';
     }
     if (adminConferencePanel) {
       adminConferencePanel.hidden = active !== 'conference';
@@ -724,7 +724,7 @@ window.SubscriptionsManager = (function () {
   };
 
   const switchAdminPanelTab = (tab) => {
-    const nextTab = tab === 'conference' ? 'conference' : 'daily';
+    const nextTab = tab === 'conference' ? 'conference' : 'latest';
     if (activeAdminPanelTab === nextTab) {
       syncAdminPanelTabs();
       return;
@@ -1116,14 +1116,14 @@ window.SubscriptionsManager = (function () {
             <div style="font-weight:600;">后台管理</div>
             <div class="dpr-admin-tabs" role="tablist" aria-label="后台管理面板切换">
               <button
-                id="dpr-admin-tab-daily"
+                id="dpr-admin-tab-latest"
                 class="dpr-admin-tab is-active"
                 type="button"
                 role="tab"
                 aria-selected="true"
                 aria-controls="arxiv-search-quick-run-side"
               >
-                日常管理
+                前沿管理
               </button>
               <button
                 id="dpr-admin-tab-conference"
@@ -1166,20 +1166,20 @@ window.SubscriptionsManager = (function () {
             id="arxiv-search-quick-run-side"
             class="dpr-admin-task-panel"
             role="tabpanel"
-            aria-labelledby="dpr-admin-tab-daily"
+            aria-labelledby="dpr-admin-tab-latest"
           >
             <div class="dpr-bulk-bar-head">
               <div>
                 <div class="chat-quick-run-title">快速抓取</div>
-                <div id="arxiv-admin-quick-run-hint" class="dpr-task-hint">默认全选词条，快速抓取不区分日常状态。</div>
+                <div id="arxiv-admin-quick-run-hint" class="dpr-task-hint">默认全选词条，快速抓取不区分前沿状态。</div>
               </div>
               <button id="arxiv-admin-open-workflow-panel-btn" class="arxiv-tool-btn dpr-task-workflow-btn" type="button">打开工作流</button>
             </div>
             <div class="dpr-task-picker-tools">
-              <button id="arxiv-admin-daily-select-all-btn" class="arxiv-tool-btn" type="button">全选</button>
-              <button id="arxiv-admin-daily-clear-all-btn" class="arxiv-tool-btn" type="button">取消全选</button>
+              <button id="arxiv-admin-latest-select-all-btn" class="arxiv-tool-btn" type="button">全选</button>
+              <button id="arxiv-admin-latest-clear-all-btn" class="arxiv-tool-btn" type="button">取消全选</button>
             </div>
-            <div id="arxiv-admin-daily-profile-picker" class="dpr-profile-picker-row"></div>
+            <div id="arxiv-admin-latest-profile-picker" class="dpr-profile-picker-row"></div>
             <div class="dpr-task-content-row">
               <div class="dpr-task-primary-column">
                 <div class="dpr-task-action-grid dpr-task-action-grid--radio" role="radiogroup" aria-label="快速抓取模式">
@@ -1267,7 +1267,7 @@ window.SubscriptionsManager = (function () {
     saveBtn = document.getElementById('arxiv-config-save-btn');
     closeBtn = document.getElementById('arxiv-search-close-btn');
     msgEl = document.getElementById('dpr-smart-msg');
-    adminDailyTabBtn = document.getElementById('dpr-admin-tab-daily');
+    adminDailyTabBtn = document.getElementById('dpr-admin-tab-latest');
     adminConferenceTabBtn = document.getElementById('dpr-admin-tab-conference');
     adminDailyPanel = document.getElementById('arxiv-search-quick-run-side');
     adminConferencePanel = document.getElementById('arxiv-conference-control-side');
@@ -1448,7 +1448,7 @@ window.SubscriptionsManager = (function () {
     if (adminDailyTabBtn && !adminDailyTabBtn._bound) {
       adminDailyTabBtn._bound = true;
       adminDailyTabBtn.addEventListener('click', () => {
-        switchAdminPanelTab('daily');
+        switchAdminPanelTab('latest');
       });
     }
 
@@ -1472,10 +1472,10 @@ window.SubscriptionsManager = (function () {
     conferenceSelectionCountEl = null;
     quickRunHintEl = document.getElementById('arxiv-admin-quick-run-hint');
     conferenceHintEl = document.getElementById('arxiv-admin-conference-hint');
-    dailyProfilePickerEl = document.getElementById('arxiv-admin-daily-profile-picker');
+    dailyProfilePickerEl = document.getElementById('arxiv-admin-latest-profile-picker');
     conferenceProfilePickerEl = document.getElementById('arxiv-admin-conference-profile-picker');
-    dailySelectAllBtn = document.getElementById('arxiv-admin-daily-select-all-btn');
-    dailyClearAllBtn = document.getElementById('arxiv-admin-daily-clear-all-btn');
+    dailySelectAllBtn = document.getElementById('arxiv-admin-latest-select-all-btn');
+    dailyClearAllBtn = document.getElementById('arxiv-admin-latest-clear-all-btn');
     conferenceSelectAllBtn = document.getElementById('arxiv-admin-conference-select-all-btn');
     conferenceClearAllBtn = document.getElementById('arxiv-admin-conference-clear-all-btn');
     resetContentBtn = document.getElementById('arxiv-admin-reset-content-btn');
@@ -1511,7 +1511,7 @@ window.SubscriptionsManager = (function () {
       });
 
     [
-      [dailyProfilePickerEl, 'daily'],
+      [dailyProfilePickerEl, 'latest'],
       [conferenceProfilePickerEl, 'conference'],
     ].forEach(([picker]) => {
       if (!picker || picker._bound) return;
@@ -1529,11 +1529,11 @@ window.SubscriptionsManager = (function () {
 
     if (dailySelectAllBtn && !dailySelectAllBtn._bound) {
       dailySelectAllBtn._bound = true;
-      dailySelectAllBtn.addEventListener('click', () => selectProfilesByMode('daily', true));
+      dailySelectAllBtn.addEventListener('click', () => selectProfilesByMode('latest', true));
     }
     if (dailyClearAllBtn && !dailyClearAllBtn._bound) {
       dailyClearAllBtn._bound = true;
-      dailyClearAllBtn.addEventListener('click', () => selectProfilesByMode('daily', false));
+      dailyClearAllBtn.addEventListener('click', () => selectProfilesByMode('latest', false));
     }
     if (conferenceSelectAllBtn && !conferenceSelectAllBtn._bound) {
       conferenceSelectAllBtn._bound = true;

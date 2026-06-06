@@ -2513,7 +2513,7 @@ article.markdown-section {
 .sidebar-conference-toggle-arrow {
   font-size: 12px;
   margin-left: 6px;
-  opacity: 0;        /* 与每日论文折叠保持一致：隐藏箭头但保留占位，避免布局抖动 */
+  opacity: 0;        /* 与前沿论文折叠保持一致：隐藏箭头但保留占位，避免布局抖动 */
   pointer-events: none;
 }
 

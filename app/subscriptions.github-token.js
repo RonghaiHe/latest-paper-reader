@@ -200,7 +200,7 @@ window.SubscriptionsGithubToken = (function () {
 
       // 3. 获取当前页面的仓库信息
       // 规则：
-      // - 若运行在 localhost（含 127.0.0.1），默认仓库名为 daily-paper-reader，owner 为当前登录用户
+      // - 若运行在 localhost（含 127.0.0.1），默认仓库名为 latest-paper-reader，owner 为当前登录用户
       // - 若运行在 username.github.io/repo-name，则从 URL 解析 owner/repo
       // - 其它域名：尝试从当前站点 config.yaml 中读取 github 信息
       const currentUrl = window.location.href;
@@ -213,7 +213,7 @@ window.SubscriptionsGithubToken = (function () {
       // 情况 A：本地开发（localhost 或 127.0.0.1）
       if (host === 'localhost' || host === '127.0.0.1') {
         repoOwner = userData.login || '';
-        repoName = 'daily-paper-reader';
+        repoName = 'latest-paper-reader';
       } else {
         // 情况 B：GitHub Pages
         const githubPagesMatch = currentUrl.match(

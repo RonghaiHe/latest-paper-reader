@@ -1,4 +1,4 @@
-# 📖 Daily Paper Reader：3 分钟搭建你的智能论文推荐站
+# 📖 Latest Paper Reader：3 分钟搭建你的智能论文推荐站
 
 一个开箱即用的学术论文推荐系统，通过关键词或自然语言描述你的研究兴趣，每天自动从 arXiv 筛选、重排、精读相关论文，并生成精美的在线阅读站点。
 
@@ -47,7 +47,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 
 1. 进入你 Fork 后的仓库 → 顶部 **Actions**
 2. 点击 **I understand my workflows, go ahead and enable them**
-3. 左侧选择 **daily-paper-reader**
+3. 左侧选择 **latest-paper-reader**
 4. 点击 **Run workflow** → 再点绿色 **Run workflow** 确认
 
 > 这一步会生成 `docs/` 与 `archive/*/recommend` 并自动提交回 `main` 分支。首次一般需要 3–8 分钟。
@@ -74,7 +74,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 - 充值：右上角头像 → 立即充值（建议先充 5 元体验）
 - 创建令牌：左侧 **令牌** → **新建令牌**（名称随意，默认即可）
 
-> 工作流默认会使用 `LOCAL_RERANK_MODEL=Qwen/Qwen3-Reranker-0.6B` 与 DeepSeek chat 模型（见 `/.github/workflows/daily-paper-reader.yml`）。
+> 工作流默认会使用 `LOCAL_RERANK_MODEL=Qwen/Qwen3-Reranker-0.6B` 与 DeepSeek chat 模型（见 `/.github/workflows/latest-paper-reader.yml`）。
 
 ---
 
@@ -87,7 +87,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 
 ### 推荐：Classic PAT（最省心）
 1. 打开创建页面（已预填权限）：  
-   https://github.com/settings/tokens/new?description=Daily%20Paper%20Reader&scopes=repo,workflow,gist
+   https://github.com/settings/tokens/new?description=Latest%20Paper%20Reader&scopes=repo,workflow,gist
 2. 过期时间建议选一个你能接受的（例如 30/90 天），到期可重新生成
 3. 生成后复制一次（GitHub 不会再次展示）
 
@@ -104,7 +104,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 ### 用户区（你可自由改）
 - `config.yaml`：你的订阅与偏好配置（上游不会覆盖）
 
-### 每日产出区（每天会更新）
+### 前沿产出区（每天会更新）
 - `docs/`：网页内容（GitHub Pages 的发布目录）
 - `archive/*/recommend`：推荐结果（按日期存档）
 - `archive/carryover.json`、`archive/arxiv_seen.json`、`archive/crawl_state.json`：运行状态（用于增量抓取与跨日保留）
@@ -117,16 +117,16 @@ Fork 后 Actions 默认暂停，需要手动激活：
 ## ❓常见问题（FAQ）
 
 - **为什么今天没有更新？**  
-  先看仓库 Actions 里 `daily-paper-reader` 是否成功；也可能当天窗口内确实无新论文或被过滤后为空。
+  先看仓库 Actions 里 `latest-paper-reader` 是否成功；也可能当天窗口内确实无新论文或被过滤后为空。
 
 - **站点能打开但没有内容？**  
   通常是首次 Actions 没跑成功，或 Pages 没指向 `/docs`。按“快速开始”第 2/3 步检查。
 
 - **我想立刻刷新一次，而不是等定时任务**  
-  进入仓库 Actions → `daily-paper-reader` → `Run workflow`；或在站点里使用“工作流触发面板”（需要 GitHub Token）。
+  进入仓库 Actions → `latest-paper-reader` → `Run workflow`；或在站点里使用“工作流触发面板”（需要 GitHub Token）。
 
 ---
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ziwenhahaha/daily-paper-reader&type=date&legend=top-left)](https://www.star-history.com/#ziwenhahaha/daily-paper-reader&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=ziwenhahaha/latest-paper-reader&type=date&legend=top-left)](https://www.star-history.com/#ziwenhahaha/latest-paper-reader&type=date&legend=top-left)
