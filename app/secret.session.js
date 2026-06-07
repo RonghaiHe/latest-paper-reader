@@ -1085,11 +1085,11 @@
           }
           const payload = await loadLocalSecretPayloadPreferred(staticPayload);
           const secret = await decryptSecret(pwd, payload);
-          // 将解密后的配置保存在内存中，不落盘，同时记住密码以便下次自动解锁
           window.decoded_secret_private = secret;
+          // 将解密后的配置保存在内存中，不落盘，同时记住密码以便下次自动解锁
           savePassword(pwd);
           setMode('full');
-          hide();
+          renderInitStep2(pwd);
         } catch (e) {
           console.error(e);
           if (errorEl) {
@@ -2450,41 +2450,7 @@
         window.DPR_ACCESS_MODE = 'locked';
 
         if (hasSecret) {
-          // 已存在 secret.private：若浏览器保存了密码，先尝试自动解锁；
-          // 成功则直接进入页面；失败或无密码则展示解锁/游客界面。
-          const savedPwd = loadSavedPassword();
-          if (savedPwd) {
-            try {
-              const payload = localPayload || staticPayload || await fetchStaticSecretPayload();
-              if (!payload) {
-                throw new Error('获取 secret.private 失败');
-              }
-              const secret = await decryptSecret(savedPwd, payload);
-              window.decoded_secret_private = secret;
-              // 这里不在 setupOverlay 作用域内，直接标记全局访问模式为 full 并广播事件
-              try {
-                setAccessMode('full', { mode: 'full' });
-              } catch {
-                // ignore
-              }
-              // 自动解锁成功时，仍然初始化一次 overlay，以便后台“密钥配置”按钮可以直接打开第二步向导
-              // 注意：此时不移除 hidden 类，浮层保持隐藏，仅注册 DPRSecretSetup.openStep2 等入口
-              try {
-                setupOverlay(true);
-              } catch {
-                // ignore
-              }
-              closeSecretOverlay(overlay);
-              return;
-            } catch (e) {
-              console.error(
-                '[SECRET] 自动解锁失败，将回退到手动输入密码界面：',
-                e,
-              );
-              clearPassword();
-            }
-          }
-          // 没有保存的密码或自动解锁失败：展示解锁/游客界面
+          // 已存在 secret.private：展示解锁界面，由用户手动输入密码
           setupOverlay(true);
           openSecretOverlay(overlay);
         } else {
