@@ -2418,12 +2418,17 @@
       return;
     }
 
-    if (!overlay) return;
+    // 注册早期入口，不依赖 overlay 是否找到（兼容 DOM 未完全就绪的情况）
     try {
       window.DPRSecretSetup = window.DPRSecretSetup || {};
       const earlyOpenStep2 = function () {
+        const el = document.getElementById('secret-gate-overlay');
+        if (!el) {
+          alert('密钥配置面板尚未就绪，请刷新后重试。');
+          return;
+        }
         setupOverlay(true);
-        openSecretOverlay(overlay);
+        openSecretOverlay(el);
         const formalOpenStep2 = window.DPRSecretSetup && window.DPRSecretSetup.openStep2;
         if (typeof formalOpenStep2 === 'function' && formalOpenStep2 !== earlyOpenStep2) {
           formalOpenStep2();
@@ -2433,6 +2438,8 @@
     } catch {
       // 初始化早期兜底入口失败时，后续 setupOverlay 仍会尝试注册正式入口。
     }
+
+    if (!overlay) return;
 
     // 检查是否已经存在 secret.private（用于区分“解锁”与“初始化”）
     (async () => {
