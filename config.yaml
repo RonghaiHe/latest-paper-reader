@@ -22,8 +22,7 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles: []
 llm:
-  # Default model in 'provider/model' form. Can be overridden by environment variable LLM_MODEL.
   default_model: glm/glm-4.7-flash
-  # Optional: base url and api_key can be set via environment variables LLM_BASE_URL and LLM_API_KEY
-  # Example providers: deepseek/deepseek-v4-flash, glm/glm-4.7-flash, custom/<model>
+source_backends: {}
