@@ -328,8 +328,9 @@
         msgEl.textContent = '正在触发处理...';
         msgEl.style.color = '#666';
         try {
+          if (window.DPRWorkflowRunner.open) window.DPRWorkflowRunner.open();
           await window.DPRWorkflowRunner.dispatchManualWorkflow(csvIds, csvDeep);
-          msgEl.textContent = '已触发，请查看工作流面板运行状态。';
+          msgEl.textContent = '已触发，工作流面板已打开，请查看运行状态。';
           msgEl.style.color = '#080';
         } catch (e) {
           msgEl.textContent = '触发失败：' + (e.message || String(e));
