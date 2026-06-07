@@ -1,4 +1,4 @@
-// 全局 UI 行为：布局 + 订阅入口按钮
+// 全局 UI 行为：布局 + 订阅入口按钮 + 手动输入
 // 1. API Base：区分本地开发与线上部署
 (function() {
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -216,5 +216,132 @@
     document.addEventListener('DOMContentLoaded', createCustomButton);
   } else {
     createCustomButton();
+  }
+})();
+
+// 4. 手动输入 arXiv ID 入口（📝 按钮 + 独立浮层）
+(function () {
+  function createManualInputButton() {
+    if (document.getElementById('dpr-manual-input-btn')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'dpr-manual-input-btn';
+    btn.className = 'custom-toggle-btn dpr-manual-input-btn';
+    btn.innerHTML = '📝';
+    btn.title = '手动输入 arXiv ID';
+    btn.setAttribute('aria-label', '手动输入 arXiv ID');
+
+    btn.addEventListener('click', function () {
+      openManualInputPanel();
+    });
+
+    // Insert after the last existing floating button
+    var existing = document.getElementById('custom-quick-run-btn') || document.getElementById('custom-toggle-btn');
+    if (existing && existing.parentNode) {
+      existing.parentNode.insertBefore(btn, existing.nextSibling);
+    } else {
+      document.body.appendChild(btn);
+    }
+  }
+
+  function createManualInputOverlay() {
+    var existing = document.getElementById('dpr-manual-input-overlay');
+    if (existing) return existing;
+
+    var overlay = document.createElement('div');
+    overlay.id = 'dpr-manual-input-overlay';
+    overlay.className = 'dpr-manual-overlay';
+    overlay.innerHTML =
+      '<div id="dpr-manual-input-panel" class="dpr-manual-panel">' +
+        '<div class="dpr-manual-panel-header">' +
+          '<div style="font-weight:600;">手动输入 arXiv ID</div>' +
+          '<button id="dpr-manual-close-btn" class="arxiv-tool-btn" style="padding:2px 6px;">关闭</button>' +
+        '</div>' +
+        '<div class="dpr-manual-panel-body">' +
+          '<div class="dpr-choice-field">' +
+            '<label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">arXiv ID（必填，每行一个）</label>' +
+            '<textarea id="dpr-manual-ids-input" class="dpr-manual-textarea" placeholder="例如：&#10;2401.12345&#10;2402.67890&#10;2303.abcde" style="width:100%; height:120px; resize:vertical; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:monospace; font-size:13px;"></textarea>' +
+          '</div>' +
+          '<div class="dpr-choice-field" style="margin-top:10px;">' +
+            '<label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">精读 ID（可选，每行一个）</label>' +
+            '<textarea id="dpr-manual-deep-dive-input" class="dpr-manual-textarea" placeholder="指定需要精读的 arXiv ID（留空则全部进入速览）" style="width:100%; height:80px; resize:vertical; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:monospace; font-size:13px;"></textarea>' +
+          '</div>' +
+          '<div style="margin-top:12px;">' +
+            '<button id="dpr-manual-run-btn" class="chat-quick-run-run-btn dpr-task-start-btn" type="button">开始处理</button>' +
+            '<div id="dpr-manual-run-msg" class="chat-quick-run-msg" style="margin-top:6px;"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function openManualInputPanel() {
+    var overlay = createManualInputOverlay();
+    overlay.style.display = 'flex';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        overlay.classList.add('show');
+      });
+    });
+
+    // Wire close button
+    var closeBtn = document.getElementById('dpr-manual-close-btn');
+    if (closeBtn && !closeBtn._bound) {
+      closeBtn._bound = true;
+      closeBtn.addEventListener('click', function () {
+        overlay.classList.remove('show');
+        setTimeout(function () { overlay.style.display = 'none'; }, 300);
+      });
+    }
+
+    // Wire overlay backdrop click
+    if (!overlay._boundClick) {
+      overlay._boundClick = true;
+      overlay.addEventListener('mousedown', function (e) {
+        if (e.target === overlay) {
+          overlay.classList.remove('show');
+          setTimeout(function () { overlay.style.display = 'none'; }, 300);
+        }
+      });
+    }
+
+    // Wire run button
+    var runBtn = document.getElementById('dpr-manual-run-btn');
+    var msgEl = document.getElementById('dpr-manual-run-msg');
+    if (runBtn && !runBtn._bound) {
+      runBtn._bound = true;
+      runBtn.addEventListener('click', async function () {
+        if (!msgEl) return;
+        var idsInput = document.getElementById('dpr-manual-ids-input');
+        var deepInput = document.getElementById('dpr-manual-deep-dive-input');
+        var rawIds = idsInput ? (idsInput.value || '').trim() : '';
+        var rawDeep = deepInput ? (deepInput.value || '').trim() : '';
+        if (!rawIds) {
+          msgEl.textContent = '请至少输入一个 arXiv ID。';
+          msgEl.style.color = '#c00';
+          return;
+        }
+        var csvIds = rawIds.split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean).join(',');
+        var csvDeep = rawDeep ? rawDeep.split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean).join(',') : '';
+        msgEl.textContent = '正在触发处理...';
+        msgEl.style.color = '#666';
+        try {
+          await window.DPRWorkflowRunner.dispatchManualWorkflow(csvIds, csvDeep);
+          msgEl.textContent = '已触发，请查看工作流面板运行状态。';
+          msgEl.style.color = '#080';
+        } catch (e) {
+          msgEl.textContent = '触发失败：' + (e.message || String(e));
+          msgEl.style.color = '#c00';
+        }
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createManualInputButton);
+  } else {
+    createManualInputButton();
   }
 })();
