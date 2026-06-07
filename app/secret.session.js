@@ -1646,7 +1646,6 @@
         return `${raw}/v1/rerank`;
       };
 
-      const selectedDeepSeekModel = () => normalizeText(deepseekModelSelect.value);
       const selectedGlmModel = () => {
         const preset = normalizeText(glmModelSelect.value);
         const custom = normalizeText(glmCustomModelInput.value);
