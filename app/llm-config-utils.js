@@ -155,6 +155,9 @@
     };
   };
 
+  const PROVIDER_PRESETS = DEEPSEEK_PRESETS;
+  const getProviderPreset = getDeepSeekPreset;
+
   const inferChatApiProfile = (baseUrl, model) => {
     const normalizedBaseUrl = normalizeBaseUrlForStorage(baseUrl || '').toLowerCase();
     const normalizedModel = normalizeText(model || '').toLowerCase();
@@ -260,6 +263,7 @@
     resolveSummaryLLM,
     inferProviderType,
     getDeepSeekPreset,
+    getProviderPreset,
     inferChatApiProfile,
     resolveJsonResponseMode,
     isDeepSeekV4Model,

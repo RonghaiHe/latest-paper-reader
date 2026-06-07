@@ -643,6 +643,7 @@
       };
 
       const safeOptions = options && typeof options === 'object' ? options : {};
+      const providerType = normalizeText(safeOptions.providerType || 'deepseek');
       const summarizedApiKey = normalizeText(safeOptions.summarizedApiKey || '');
       const summarizedBaseUrl = normalizeBaseUrlForStorage(safeOptions.summarizedBaseUrl || '');
       const summarizedModel = normalizeText(safeOptions.summarizedModel || '');
@@ -785,7 +786,8 @@
       return true;
     } catch (e) {
       console.error('[SECRET] 保存 GitHub Secrets 失败：', e);
-      return false;
+      const detail = e && e.message ? e.message : String(e);
+      throw new Error(`保存 GitHub Secrets 失败：${detail}`);
     }
   }
 
@@ -1130,9 +1132,9 @@
       const initialApiKey = normalizeText(currentSummaryLLM.apiKey || '');
       const currentProviderType = inferProviderType(currentSecret) || 'deepseek';
       const llmUtils = getLLMUtils();
-      const deepseekPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('deepseek') : { defaultModel: 'deepseek/deepseek-v4-flash', models: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'] };
-      const glmPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('glm') : { defaultModel: 'glm-4.7-flash', models: ['glm-4.7-flash', 'glm-4-plus', 'glm-4-air', 'glm-4-long'] };
-      const customPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('custom') : { defaultModel: '', models: [] };
+      const deepseekPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('deepseek') : { defaultModel: 'deepseek/deepseek-v4-flash', baseUrl: 'https://api.deepseek.com', models: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'] };
+      const glmPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('glm') : { defaultModel: 'glm-4.7-flash', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4.7-flash', 'glm-4-plus', 'glm-4-air', 'glm-4-long'] };
+      const customPreset = typeof llmUtils.getProviderPreset === 'function' ? llmUtils.getProviderPreset('custom') : { defaultModel: '', baseUrl: '', models: [] };
       const initialDeepSeekModel = normalizeText(currentSummaryLLM.model || '') || deepseekPreset.defaultModel;
       const deepseekSummaryModels = (deepseekPreset.models || []).map((model) => ({
         value: model,
@@ -2178,32 +2180,31 @@
           genBtn.disabled = true;
 
           if (!localOnly) {
-            const secretsOk = await saveSummarizeSecretsToGithub(
-              githubToken,
-              {
-                providerType: providerDraft.providerType,
-                summarizedApiKey: providerDraft.summaryApiKey,
-                summarizedBaseUrl: providerDraft.summaryBaseUrl,
-                summarizedModel: providerDraft.summaryModel,
-                filterModel: providerDraft.filterModel,
-                rewriteModel: providerDraft.rewriteModel,
-                skipRerank: providerDraft.skipRerank,
-                localRerankModel: 'Qwen/Qwen3-Reranker-0.6B',
-                rerankerProfile: providerDraft.reranker && providerDraft.reranker.profile,
-                rerankerProvider: providerDraft.reranker && providerDraft.reranker.provider,
-                rerankerModel: providerDraft.reranker && providerDraft.reranker.model,
-                rerankerApiKey: providerDraft.reranker && providerDraft.reranker.apiKey,
-                rerankerBaseUrl: providerDraft.reranker && providerDraft.reranker.baseUrl,
-              },
-              (current, total, secretName) => {
-                setErrorText(`(${current}/${total}) 正在上传 GitHub Secret：${secretName}...`, '#666');
-              },
-            );
-            if (!secretsOk) {
-              setErrorText(
-                '❌ 写入 GitHub Secrets 失败，请检查网络、Token 权限（需 Classic PAT + repo/workflow/gist）或稍后重试。',
-                '#c00',
+            try {
+              await saveSummarizeSecretsToGithub(
+                githubToken,
+                {
+                  providerType: providerDraft.providerType,
+                  summarizedApiKey: providerDraft.summaryApiKey,
+                  summarizedBaseUrl: providerDraft.summaryBaseUrl,
+                  summarizedModel: providerDraft.summaryModel,
+                  filterModel: providerDraft.filterModel,
+                  rewriteModel: providerDraft.rewriteModel,
+                  skipRerank: providerDraft.skipRerank,
+                  localRerankModel: 'Qwen/Qwen3-Reranker-0.6B',
+                  rerankerProfile: providerDraft.reranker && providerDraft.reranker.profile,
+                  rerankerProvider: providerDraft.reranker && providerDraft.reranker.provider,
+                  rerankerModel: providerDraft.reranker && providerDraft.reranker.model,
+                  rerankerApiKey: providerDraft.reranker && providerDraft.reranker.apiKey,
+                  rerankerBaseUrl: providerDraft.reranker && providerDraft.reranker.baseUrl,
+                },
+                (current, total, secretName) => {
+                  setErrorText(`(${current}/${total}) 正在上传 GitHub Secret：${secretName}...`, '#666');
+                },
               );
+            } catch (secretErr) {
+              const detail = secretErr && secretErr.message ? secretErr.message : String(secretErr);
+              setErrorText(`❌ ${detail}`, '#c00');
               return;
             }
           }
