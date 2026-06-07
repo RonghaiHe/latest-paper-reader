@@ -1370,17 +1370,6 @@
                 </div>
               </div>
               <div id="secret-setup-reranker-status" style="font-size:12px; color:#666; line-height:1.6;"></div>
-              <input type="radio" name="secret-setup-provider" value="deepseek" checked style="display:none;" />
-            </div>
-
-            <div id="secret-setup-custom-section" style="display:none;">
-              <input id="secret-setup-custom-api-key" type="hidden" />
-              <input id="secret-setup-custom-base-url" type="hidden" />
-              <input id="secret-setup-custom-model-1" type="hidden" />
-              <input id="secret-setup-custom-model-2" type="hidden" />
-              <input id="secret-setup-custom-model-3" type="hidden" />
-              <button id="secret-setup-custom-test" type="button" style="display:none;"></button>
-              <div id="secret-setup-custom-status" style="display:none;"></div>
             </div>
           </div>
         </div>
@@ -1533,6 +1522,22 @@
 
       const selectedDeepSeekModel = () => {
         return normalizeText(deepseekModelSelect.value || '');
+      };
+      const getSelectedProvider = () => {
+        if (!Array.isArray(providerInputs) || !providerInputs.length) return 'deepseek';
+        const checked = providerInputs.find((input) => input && input.checked);
+        if (checked) return normalizeText(checked.value) || 'deepseek';
+        return 'deepseek';
+      };
+      const setSelectedProvider = (provider) => {
+        if (!Array.isArray(providerInputs) || !providerInputs.length) return;
+        const target = providerInputs.find(
+          (input) => input && input.value === provider,
+        );
+        if (target) {
+          target.checked = true;
+          syncProviderSections();
+        }
       };
       const selectedRerankerProfile = () => {
         return findRerankerProfile(rerankerProfileSelect.value);
@@ -1821,6 +1826,7 @@
       });
       renderCustomLlmChips();
 
+      setSelectedProvider(currentProviderType);
       syncProviderSections();
       syncRerankerFields();
       resetRerankerTestStatus();
@@ -1906,10 +1912,7 @@
       providerInputs.forEach((input) => {
         input.addEventListener('change', () => {
           syncProviderSections();
-          setErrorText(
-            'DeepSeek 密钥将加密写入 GitHub Secrets（用于 GitHub Actions），并同步生成本地 secret.private 备份。',
-            '#999',
-          );
+          updateProviderHint();
         });
       });
 
