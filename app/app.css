@@ -3163,6 +3163,15 @@ article.markdown-section {
   background: rgba(0, 0, 0, 0.04);
   transform: translateY(-1px);
 }
+#custom-quick-run-btn {
+  left: 88px;
+}
+#dpr-manual-input-btn {
+  left: 136px;
+}
+#dpr-secret-setup-btn {
+  left: 184px;
+}
 
 /* 确保 Docsify 自带的 sidebar 折叠按钮在聊天浮层之上可见（尤其是小屏幕） */
 .sidebar-toggle {
@@ -3216,6 +3225,15 @@ article.markdown-section {
     left: 24px;
     font-size: 12px;
   }
+  #custom-quick-run-btn {
+    left: 48px;
+  }
+  #dpr-manual-input-btn {
+    left: 72px;
+  }
+  #dpr-secret-setup-btn {
+    left: 96px;
+  }
 }
 
 /* 小屏下彻底隐藏左下角最初的两个全局按钮，只保留聊天区里的两个按钮 */
@@ -3254,6 +3272,15 @@ article.markdown-section {
 
   body.dpr-landing-page .custom-toggle-btn {
     left: calc(env(safe-area-inset-left, 0px) + 64px);
+  }
+  body.dpr-landing-page #custom-quick-run-btn {
+    left: calc(env(safe-area-inset-left, 0px) + 110px);
+  }
+  body.dpr-landing-page #dpr-manual-input-btn {
+    left: calc(env(safe-area-inset-left, 0px) + 156px);
+  }
+  body.dpr-landing-page #dpr-secret-setup-btn {
+    left: calc(env(safe-area-inset-left, 0px) + 202px);
   }
 
   body.dpr-landing-page .sidebar-toggle:hover,

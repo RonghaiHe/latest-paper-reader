@@ -346,3 +346,39 @@
     createManualInputButton();
   }
 })();
+
+// 5. 密钥配置入口（🔑 按钮 → 直接打开 LLM 配置浮层）
+(function () {
+  function createSecretSetupBtn() {
+    if (document.getElementById('dpr-secret-setup-btn')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'dpr-secret-setup-btn';
+    btn.className = 'custom-toggle-btn dpr-secret-setup-btn';
+    btn.innerHTML = '🔑';
+    btn.title = '密钥 / LLM 配置';
+    btn.setAttribute('aria-label', '密钥 / LLM 配置');
+
+    btn.addEventListener('click', function () {
+      if (window.DPRSecretSetup && window.DPRSecretSetup.openStep2) {
+        window.DPRSecretSetup.openStep2();
+      } else {
+        alert('密钥配置脚本尚未加载，请刷新后重试。');
+      }
+    });
+
+    // Insert after the 📝 button
+    var existing = document.getElementById('dpr-manual-input-btn') || document.getElementById('custom-quick-run-btn') || document.getElementById('custom-toggle-btn');
+    if (existing && existing.parentNode) {
+      existing.parentNode.insertBefore(btn, existing.nextSibling);
+    } else {
+      document.body.appendChild(btn);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createSecretSetupBtn);
+  } else {
+    createSecretSetupBtn();
+  }
+})();
