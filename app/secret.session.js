@@ -2086,7 +2086,7 @@
 
         let providerDraft = null;
         try {
-          providerDraft = collectProviderDraft();
+          providerDraft = getProviderDraftFor(getSelectedProvider());
         } catch (e) {
           setErrorText(e.message || '当前模型配置不完整。', '#c00');
           return;
