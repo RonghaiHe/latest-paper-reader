@@ -2374,18 +2374,13 @@
     try {
       window.DPRSecretSetup = window.DPRSecretSetup || {};
       window.DPRSecretSetup.openStep2 = function () {
-        const savedPwd = loadSavedPassword();
         openSecretOverlay(overlay);
-        // 确保浮层可见
-        if (hasSecretFile && !savedPwd) {
-          // 已有 secret.private 但浏览器没有保存密码时，必须先解锁，不能回到初始化向导。
+        if (hasSecretFile) {
           renderUnlockUI();
-        } else if (!savedPwd) {
-          // 没有 secret.private 且没有保存密码：从第 1 步开始完整向导。
+        } else if (!loadSavedPassword()) {
           renderInitStep1();
         } else {
-          // 已保存密码：直接进入第 2 步配置向导
-          renderInitStep2(savedPwd);
+          renderInitStep2(loadSavedPassword());
         }
       };
     } catch {
