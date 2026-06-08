@@ -2,10 +2,7 @@ github:
   owner: ''
   repo: latest-paper-reader
 arxiv_paper_setting:
-  mode: standard
-  days_window: 9
   docs_dir: docs
-  prefer_supabase_read: true
 supabase:
   enabled: true
   url: https://lyucdwgefyfbmaiopjbk.supabase.co
@@ -25,3 +22,7 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles: []
+llm:
+  default_model: glm/glm-4.7-flash
+source_backends: {}
