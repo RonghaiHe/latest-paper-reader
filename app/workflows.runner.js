@@ -942,10 +942,15 @@ window.DPRWorkflowRunner = (function () {
           `运行已结束：${run.conclusion || 'completed'}`,
           run.conclusion === 'success' ? '#080' : '#c00',
         );
-        // run 状态结束后，刷新“最近运行”列表，确保 completed/success 等状态能及时反映
+        // run 状态结束后，刷新"最近运行"列表，确保 completed/success 等状态能及时反映
         if (prevStateKey !== stateKey) {
           loadRecentRuns();
         }
+        // 成功完成后自动刷新页面，使新论文出现在侧边栏和首页
+        if (run.conclusion === 'success') {
+          setTimeout(() => { window.location.reload(); }, 1500);
+        }
+      }
       } else {
         setStatus('运行中：每 5 秒自动刷新...', '#1565c0', { waiting: true });
       }

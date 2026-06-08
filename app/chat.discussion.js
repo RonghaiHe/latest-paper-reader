@@ -963,7 +963,7 @@ window.PrivateDiscussionChat = (function () {
       if (userAtBottom) {
         window.scrollTo({
           top: document.documentElement.scrollHeight,
-          behavior: 'smooth'
+          behavior: 'instant'
         });
       }
     };
@@ -971,7 +971,7 @@ window.PrivateDiscussionChat = (function () {
     // 发送消息后立即滚动到底部
     window.scrollTo({
       top: document.documentElement.scrollHeight,
-      behavior: 'smooth'
+      behavior: 'instant'
     });
 
     const thinkingContainer = aiItem.querySelector('.thinking-container');
