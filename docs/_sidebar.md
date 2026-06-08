@@ -1,4 +1,5 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
+* <a class="dpr-sidebar-root-link" href="#/papers/README">论文列表</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
 * Latest Papers
   * 2017-06-12

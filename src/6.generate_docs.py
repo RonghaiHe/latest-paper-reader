@@ -1014,6 +1014,87 @@ def build_docsify_id_href(path_no_ext: str) -> str:
     return f"/{p}"
 
 
+def _extract_paper_preview_from_md(docs_dir: str, paper_id: str) -> Dict[str, str]:
+    """从论文 Markdown 中提取速读预览字段（motivation/method/result/conclusion/tldr/score）。"""
+    result: Dict[str, str] = {}
+    md_path = os.path.join(docs_dir, f"{paper_id}.md")
+    if not os.path.isfile(md_path):
+        return result
+    try:
+        with open(md_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except Exception:
+        return result
+    fm = _parse_front_matter(text)
+    if not fm:
+        return result
+    for key in ("motivation", "method", "result", "conclusion", "tldr", "score"):
+        val = fm.get(key)
+        if val is not None:
+            result[key] = str(val).strip()
+    return result
+
+
+def _format_star_rating(score_str: str) -> str:
+    """将 10 分制评分转为星级显示（如 4.5/5）。"""
+    try:
+        s = float(score_str)
+    except Exception:
+        return ""
+    if not math.isfinite(s) or s <= 0:
+        return ""
+    s = max(0.0, min(10.0, s))
+    stars = round_half_up(s) / 2.0
+    return f"{stars:.1f}/5"
+
+
+def _render_paper_card(
+    idx: int,
+    paper_id: str,
+    title: str,
+    tags: List[Tuple[str, str]],
+    evidence: str,
+    preview: Dict[str, str],
+    section_label: str,
+) -> List[str]:
+    """渲染单张论文卡片的 Markdown 行。"""
+    safe_title = (title or "").strip() or paper_id
+    href = build_docsify_id_href(paper_id)
+    lines: List[str] = []
+    lines.append(f'<div class="dpr-paper-card">')
+    lines.append(f'<div class="dpr-paper-card-header">')
+    lines.append(f'<span class="dpr-paper-card-idx">{idx}.</span> ')
+    lines.append(f'<a class="dpr-paper-card-title" href="{href}">{safe_title}</a>')
+    score_str = (preview.get("score") or "").strip()
+    star_text = _format_star_rating(score_str)
+    if star_text:
+        lines.append(f'<span class="dpr-paper-card-score">⭐ {star_text}</span>')
+    lines.append(f'<span class="dpr-paper-card-section">{section_label}</span>')
+    lines.append(f'</div>')
+    tag_text = _format_entry_tags(tags)
+    if tag_text:
+        lines.append(f'<div class="dpr-paper-card-tags">标签：{tag_text}</div>')
+    if evidence:
+        lines.append(f'<div class="dpr-paper-card-evidence">💡 {evidence}</div>')
+    motivation = (preview.get("motivation") or "").strip()
+    method = (preview.get("method") or "").strip()
+    result_text = (preview.get("result") or "").strip()
+    conclusion = (preview.get("conclusion") or "").strip()
+    if motivation or method or result_text or conclusion:
+        lines.append(f'<div class="dpr-paper-card-preview">')
+        if motivation:
+            lines.append(f'<div class="dpr-paper-card-preview-row"><span class="dpr-paper-card-preview-label">Motivation</span> {motivation}</div>')
+        if method:
+            lines.append(f'<div class="dpr-paper-card-preview-row"><span class="dpr-paper-card-preview-label">Method</span> {method}</div>')
+        if result_text:
+            lines.append(f'<div class="dpr-paper-card-preview-row"><span class="dpr-paper-card-preview-label">Result</span> {result_text}</div>')
+        if conclusion:
+            lines.append(f'<div class="dpr-paper-card-preview-row"><span class="dpr-paper-card-preview-label">Conclusion</span> {conclusion}</div>')
+        lines.append(f'</div>')
+    lines.append(f'</div>')
+    return lines
+
+
 def build_latest_report_section(
     date_str: str,
     date_label: str | None,
@@ -1022,6 +1103,7 @@ def build_latest_report_section(
     deep_entries: List[Tuple[str, str, List[Tuple[str, str]]]],
     quick_entries: List[Tuple[str, str, List[Tuple[str, str]]]],
     paper_evidence_by_id: Dict[str, str],
+    docs_dir: str = "",
 ) -> str:
     effective_label = (date_label or "").strip() or format_date_str(date_str)
     run_status = "成功" if recommend_exists else "未产出 recommend 文件（视为无结果）"
@@ -1053,30 +1135,31 @@ def build_latest_report_section(
         report_href = build_docsify_id_href(f"{ym}/{day}/README")
     lines.append(f"- 详情：[{report_href}]({report_href})")
     lines.append("")
-    lines.append("### 精读区论文标签")
+
     if deep_entries:
+        lines.append("### 精读区论文")
         for idx, (paper_id, title, tags) in enumerate(deep_entries, start=1):
-            safe_title = (title or "").strip() or paper_id
             evidence = (paper_evidence_by_id.get(str(paper_id).strip(), "") or "").strip()
-            lines.append(f"{idx}. [{safe_title}]({build_docsify_id_href(paper_id)})  ")
-            lines.append(f"   标签：{_format_entry_tags(tags)}")
-            if evidence:
-                lines.append(f"   evidence：{evidence}")
+            preview = _extract_paper_preview_from_md(docs_dir, paper_id) if docs_dir else {}
+            lines.extend(_render_paper_card(idx, paper_id, title, tags, evidence, preview, "精读"))
+        lines.append("")
     else:
+        lines.append("### 精读区论文标签")
         lines.append("- 本次无精读推荐。")
-    lines.append("")
-    lines.append("### 速读区论文标签")
+        lines.append("")
+
     if quick_entries:
+        lines.append("### 速读区论文")
         for idx, (paper_id, title, tags) in enumerate(quick_entries, start=1):
-            safe_title = (title or "").strip() or paper_id
             evidence = (paper_evidence_by_id.get(str(paper_id).strip(), "") or "").strip()
-            lines.append(f"{idx}. [{safe_title}]({build_docsify_id_href(paper_id)})  ")
-            lines.append(f"   标签：{_format_entry_tags(tags)}")
-            if evidence:
-                lines.append(f"   evidence：{evidence}")
+            preview = _extract_paper_preview_from_md(docs_dir, paper_id) if docs_dir else {}
+            lines.extend(_render_paper_card(idx, paper_id, title, tags, evidence, preview, "速读"))
+        lines.append("")
     else:
+        lines.append("### 速读区论文标签")
         lines.append("- 本次无速读推荐。")
-    lines.append("")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -1761,8 +1844,15 @@ def update_sidebar(
     if latest_idx == -1:
         if not any("[首页]" in line for line in lines):
             lines.append("* [首页](/)\n")
+        if not any("[论文列表]" in line for line in lines):
+            lines.append("* [论文列表](/papers/README)\n")
         lines.append("* Latest Papers\n")
         latest_idx = len(lines) - 1
+    else:
+        # 在 Latest Papers 之前插入论文列表入口（如果不存在）
+        if not any("[论文列表]" in line for line in lines):
+            lines.insert(latest_idx, "* [论文列表](/papers/README)\n")
+            latest_idx += 1
 
     day_idx = -1
     for i in range(latest_idx + 1, len(lines)):
@@ -1971,6 +2061,7 @@ def build_home_readme_content(
         deep_entries=deep_entries,
         quick_entries=quick_entries,
         paper_evidence_by_id=paper_evidence_by_id,
+        docs_dir=docs_dir,
     )
 
     lines: List[str] = []
@@ -2734,7 +2825,61 @@ def main() -> None:
     log(f"[OK] latest report log saved: {run_log}")
     log_substep("6.7", "写入运行日志（日报）", "END")
 
+    log_substep("6.8", "生成论文列表总索引", "START")
+    try:
+        idx_path = write_papers_consolidated_index(docs_dir)
+        log(f"[OK] consolidated papers index saved: {idx_path}")
+    except Exception as e:
+        log(f"[WARN] 生成论文列表总索引失败：{e}")
+    log_substep("6.8", "生成论文列表总索引", "END")
+
     log(f"[OK] docs updated: {docs_dir}")
+
+
+def write_papers_consolidated_index(docs_dir: str) -> str:
+    """
+    扫描 docs/ 下所有 papers.meta.json，合并为一份总索引文件 docs/papers/index.json。
+    供前端论文列表页使用。
+    """
+    all_papers: List[Dict[str, Any]] = []
+    ym_dirs = sorted(
+        [d for d in os.listdir(docs_dir) if re.fullmatch(r"\d{6}", d)],
+        reverse=True,
+    )
+    for ym in ym_dirs:
+        ym_path = os.path.join(docs_dir, ym)
+        if not os.path.isdir(ym_path):
+            continue
+        day_dirs = sorted(
+            [d for d in os.listdir(ym_path) if re.fullmatch(r"\d{2}", d)],
+            reverse=True,
+        )
+        for day in day_dirs:
+            meta_path = os.path.join(ym_path, day, "papers.meta.json")
+            if not os.path.isfile(meta_path):
+                continue
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                papers = data.get("papers") or []
+                for paper in papers:
+                    paper["_date_label"] = data.get("label", "")
+                    paper["_date"] = data.get("date", "")
+                    all_papers.append(paper)
+            except Exception:
+                continue
+
+    out_dir = os.path.join(docs_dir, "papers")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "index.json")
+    payload = {
+        "count": len(all_papers),
+        "papers": all_papers,
+    }
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return out_path
 
 
 if __name__ == "__main__":

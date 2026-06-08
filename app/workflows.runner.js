@@ -18,12 +18,6 @@ window.DPRWorkflowRunner = (function () {
       dispatchInputs: {},
     },
     {
-      key: 'sync',
-      id: 'sync.yml',
-      name: '同步上游代码',
-      desc: '触发 Upstream Sync 工作流（合并上游 main 到当前仓库）。',
-    },
-    {
       key: 'reset-content',
       id: 'reset-content.yml',
       name: '重置 content（docs + archive）',
@@ -502,14 +496,6 @@ window.DPRWorkflowRunner = (function () {
       return;
     }
     const blocks = WORKFLOWS.map((wf) => {
-      if (wf.key === 'sync' && repoContext && repoContext.isFork === false) {
-        return `
-          <div class="dpr-wf-recent-block">
-            <div class="dpr-wf-recent-block-title">${escapeHtml(wf.name)}</div>
-            <div style="color:#c90;">当前仓库不是 GitHub Fork，已禁用上游同步。</div>
-          </div>
-        `;
-      }
       const list = (byWorkflow && byWorkflow[String(wf.key || wf.id || '')]) || [];
       const items = Array.isArray(list) ? list : [];
       const lines = items
@@ -706,13 +692,6 @@ window.DPRWorkflowRunner = (function () {
     const { owner, repo } = repoContext;
     if (!owner || !repo) {
       setStatus('无法推断目标仓库：请确认 GitHub Token 有效，或使用 xxx.github.io/仓库名/ 访问。', '#c00');
-      return;
-    }
-    if (wf.key === 'sync' && repoContext.isFork === false) {
-      setStatus('当前仓库不是 GitHub Fork，无法使用上游同步。', '#c00');
-      runsEl.innerHTML =
-        '<div style="color:#c00;">当前仓库不是 Fork 仓库，Upstream Sync 不会运行。</div>' +
-        `<div style="margin-top:8px;"><a class="arxiv-tool-btn" style="padding:6px 10px; text-decoration:none;" target="_blank" href="https://github.com/${owner}/${repo}/fork">前往 Fork 当前仓库</a></div>`;
       return;
     }
 

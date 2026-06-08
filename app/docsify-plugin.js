@@ -4494,6 +4494,123 @@ window.$docsify = {
         refreshDeferredPageEnhancements,
       );
 
+      // --- 论文列表页渲染 ---
+      const renderPapersListPage = async () => {
+        const container = document.getElementById('dpr-papers-page');
+        if (!container) return;
+        try {
+          const res = await fetch('docs/papers/index.json');
+          if (!res.ok) throw new Error('无法加载论文索引');
+          const data = await res.json();
+          const papers = Array.isArray(data.papers) ? data.papers : [];
+          if (!papers.length) {
+            container.innerHTML = '<div class="dpr-papers-empty">暂无论文数据。请先运行论文处理流水线。</div>';
+            return;
+          }
+
+          const allDates = [...new Set(papers.map((p) => p._date_label || p._date || ''))].filter(Boolean);
+          const allSections = [...new Set(papers.map((p) => p.section || ''))].filter(Boolean);
+          const allTags = [...new Set(papers.flatMap((p) => {
+            const tags = p.tags || '';
+            return typeof tags === 'string' ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+          }))].filter(Boolean);
+
+          let html = '<div class="dpr-papers-filter">';
+          html += '<input class="dpr-papers-search" type="text" placeholder="搜索论文标题、作者、摘要..." />';
+          html += '<div class="dpr-papers-filter-row">';
+          html += '<select class="dpr-papers-filter-date"><option value="">全部日期</option>';
+          allDates.forEach((d) => { html += `<option value="${escapeHtmlAttr(d)}">${escapeHtml(d)}</option>`; });
+          html += '</select>';
+          html += '<select class="dpr-papers-filter-section"><option value="">全部类型</option>';
+          allSections.forEach((s) => {
+            const label = s === 'deep' ? '精读' : s === 'quick' ? '速读' : s;
+            html += `<option value="${escapeHtmlAttr(s)}">${escapeHtml(label)}</option>`;
+          });
+          html += '</select>';
+          html += '<select class="dpr-papers-filter-tag"><option value="">全部标签</option>';
+          allTags.forEach((t) => { html += `<option value="${escapeHtmlAttr(t)}">${escapeHtml(t)}</option>`; });
+          html += '</select>';
+          html += '</div></div>';
+          html += '<div class="dpr-papers-count"></div>';
+          html += '<div class="dpr-papers-list"></div>';
+          container.innerHTML = html;
+
+          const searchInput = container.querySelector('.dpr-papers-search');
+          const dateSelect = container.querySelector('.dpr-papers-filter-date');
+          const sectionSelect = container.querySelector('.dpr-papers-filter-section');
+          const tagSelect = container.querySelector('.dpr-papers-filter-tag');
+          const countEl = container.querySelector('.dpr-papers-count');
+          const listEl = container.querySelector('.dpr-papers-list');
+
+          const renderList = () => {
+            const q = (searchInput.value || '').toLowerCase().trim();
+            const dateVal = dateSelect.value || '';
+            const sectionVal = sectionSelect.value || '';
+            const tagVal = tagSelect.value || '';
+
+            let filtered = papers;
+            if (dateVal) filtered = filtered.filter((p) => (p._date_label || p._date || '') === dateVal);
+            if (sectionVal) filtered = filtered.filter((p) => (p.section || '') === sectionVal);
+            if (tagVal) filtered = filtered.filter((p) => (p.tags || '').includes(tagVal));
+            if (q) {
+              filtered = filtered.filter((p) => {
+                const haystack = [p.title_en, p.authors, p.evidence, p.tldr, p.abstract_en, p.tags].join(' ').toLowerCase();
+                return haystack.includes(q);
+              });
+            }
+
+            countEl.textContent = `共 ${filtered.length} 篇论文`;
+            if (!filtered.length) {
+              listEl.innerHTML = '<div class="dpr-papers-empty">未找到匹配的论文。</div>';
+              return;
+            }
+
+            let cards = '';
+            filtered.forEach((p, i) => {
+              const href = `#/${(p.paper_id || '').replace(/\.md$/i, '')}`;
+              const sectionLabel = p.section === 'deep' ? '精读' : p.section === 'quick' ? '速读' : (p.section || '');
+              const starText = formatStarRating(p.score);
+              const tagsHtml = (p.tags || '').split(',').filter(Boolean).map((t) => `<span class="dpr-papers-tag">${escapeHtml(t.trim())}</span>`).join(' ');
+              cards += '<div class="dpr-paper-card">';
+              cards += '<div class="dpr-paper-card-header">';
+              cards += `<span class="dpr-paper-card-idx">${i + 1}.</span> `;
+              cards += `<a class="dpr-paper-card-title" href="${escapeHtmlAttr(href)}">${escapeHtml(p.title_en || p.paper_id || '')}</a>`;
+              if (starText) cards += `<span class="dpr-paper-card-score">⭐ ${starText}</span>`;
+              if (sectionLabel) cards += `<span class="dpr-paper-card-section">${escapeHtml(sectionLabel)}</span>`;
+              cards += '</div>';
+              if (p.authors) cards += `<div class="dpr-papers-authors">${escapeHtml(p.authors)}</div>`;
+              if (p._date_label) cards += `<div class="dpr-papers-date">${escapeHtml(p._date_label)}</div>`;
+              if (tagsHtml) cards += `<div class="dpr-paper-card-tags">${tagsHtml}</div>`;
+              if (p.evidence) cards += `<div class="dpr-paper-card-evidence">💡 ${escapeHtml(p.evidence)}</div>`;
+              if (p.tldr) cards += `<div class="dpr-paper-card-tldr">${escapeHtml(p.tldr)}</div>`;
+              cards += '</div>';
+            });
+            listEl.innerHTML = cards;
+          };
+
+          searchInput.addEventListener('input', renderList);
+          dateSelect.addEventListener('change', renderList);
+          sectionSelect.addEventListener('change', renderList);
+          tagSelect.addEventListener('change', renderList);
+          renderList();
+        } catch (e) {
+          container.innerHTML = `<div class="dpr-papers-empty">加载论文列表失败：${escapeHtml(e.message || String(e))}</div>`;
+        }
+      };
+
+      const escapeHtmlAttr = (str) => {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+
+      const formatStarRating = (scoreStr) => {
+        const s = parseFloat(scoreStr);
+        if (!isFinite(s) || s <= 0) return '';
+        const clamped = Math.max(0, Math.min(10, s));
+        const stars = Math.round(clamped / 2 * 2) / 2;
+        return `${stars.toFixed(1)}/5`;
+      };
+
       // --- Docsify 生命周期钩子 ---
       hook.doneEach(function () {
         try {
@@ -4537,6 +4654,13 @@ window.$docsify = {
           modal.classList.remove('is-open', 'is-closing', 'is-fullscreen');
           modal.setAttribute('aria-hidden', 'true');
         });
+
+        // 论文列表页渲染
+        const isPapersListPage = /papers\/README\.md$/i.test(file);
+        if (isPapersListPage) {
+          renderPapersListPage();
+          return;
+        }
 
         // A. 对正文区域进行一次全局公式渲染（支持 $...$ / $$...$$）
         const mainContent = document.querySelector('.markdown-section');

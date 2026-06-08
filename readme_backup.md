@@ -82,7 +82,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 
 站点前端会调用 GitHub API 来完成这些能力，因此需要 GitHub Token：
 - **一键写入仓库 Secrets**（保存 `DEEPSEEK_API_KEY` 等）
-- **站内触发 Actions 工作流**（立即刷新 / 同步上游）
+- **站内触发 Actions 工作流**（立即刷新）
 - **生成 GitHub Gist 分享链接**（论文页面“分享”按钮）
 
 ### 推荐：Classic PAT（最省心）
@@ -110,7 +110,7 @@ Fork 后 Actions 默认暂停，需要手动激活：
 - `archive/carryover.json`、`archive/arxiv_seen.json`、`archive/crawl_state.json`：运行状态（用于增量抓取与跨日保留）
 
 ### 代码区（上游可能更新）
-除 `archive/` 和 `docs/` 外，其它都视为代码区（建议不要在 Fork 里大改核心代码，以免将来同步上游冲突）。
+除 `archive/` 和 `docs/` 外，其它都视为代码区。
 
 ---
 
