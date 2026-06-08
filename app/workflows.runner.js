@@ -950,7 +950,6 @@ window.DPRWorkflowRunner = (function () {
         if (run.conclusion === 'success') {
           setTimeout(() => { window.location.reload(); }, 1500);
         }
-      }
       } else {
         setStatus('运行中：每 5 秒自动刷新...', '#1565c0', { waiting: true });
       }
