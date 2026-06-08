@@ -4499,10 +4499,41 @@ window.$docsify = {
         const container = document.getElementById('dpr-papers-page');
         if (!container) return;
         try {
-          const res = await fetch('docs/papers/index.json');
-          if (!res.ok) throw new Error('无法加载论文索引');
-          const data = await res.json();
-          const papers = Array.isArray(data.papers) ? data.papers : [];
+          let papers = [];
+
+          // 优先加载总索引
+          try {
+            const res = await fetch('docs/papers/index.json');
+            if (res.ok) {
+              const data = await res.json();
+              papers = Array.isArray(data.papers) ? data.papers : [];
+            }
+          } catch { /* 忽略 */ }
+
+          // 总索引为空时，回退扫描 dirs.json 中列出的目录
+          if (!papers.length) {
+            try {
+              const dirsRes = await fetch('docs/papers/dirs.json');
+              if (dirsRes.ok) {
+                const dirs = await dirsRes.json();
+                for (const dir of (Array.isArray(dirs) ? dirs : [])) {
+                  try {
+                    const metaRes = await fetch(`docs/${dir}/papers.meta.json`);
+                    if (!metaRes.ok) continue;
+                    const meta = await metaRes.json();
+                    const dateLabel = meta.label || meta.date || '';
+                    const dateVal = meta.date || '';
+                    for (const p of (meta.papers || [])) {
+                      p._date_label = dateLabel;
+                      p._date = dateVal;
+                      papers.push(p);
+                    }
+                  } catch { /* 忽略 */ }
+                }
+              }
+            } catch { /* 忽略 */ }
+          }
+
           if (!papers.length) {
             container.innerHTML = '<div class="dpr-papers-empty">暂无论文数据。请先运行论文处理流水线。</div>';
             return;

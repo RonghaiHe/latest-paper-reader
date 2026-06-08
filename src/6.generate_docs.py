@@ -2839,9 +2839,11 @@ def main() -> None:
 def write_papers_consolidated_index(docs_dir: str) -> str:
     """
     扫描 docs/ 下所有 papers.meta.json，合并为一份总索引文件 docs/papers/index.json。
+    同时生成 docs/papers/dirs.json 列出所有包含 papers.meta.json 的目录。
     供前端论文列表页使用。
     """
     all_papers: List[Dict[str, Any]] = []
+    meta_dirs: List[str] = []
     ym_dirs = sorted(
         [d for d in os.listdir(docs_dir) if re.fullmatch(r"\d{6}", d)],
         reverse=True,
@@ -2858,6 +2860,8 @@ def write_papers_consolidated_index(docs_dir: str) -> str:
             meta_path = os.path.join(ym_path, day, "papers.meta.json")
             if not os.path.isfile(meta_path):
                 continue
+            dir_key = f"{ym}/{day}"
+            meta_dirs.append(dir_key)
             try:
                 with open(meta_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -2871,6 +2875,7 @@ def write_papers_consolidated_index(docs_dir: str) -> str:
 
     out_dir = os.path.join(docs_dir, "papers")
     os.makedirs(out_dir, exist_ok=True)
+
     out_path = os.path.join(out_dir, "index.json")
     payload = {
         "count": len(all_papers),
@@ -2879,6 +2884,12 @@ def write_papers_consolidated_index(docs_dir: str) -> str:
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
         f.write("\n")
+
+    dirs_path = os.path.join(out_dir, "dirs.json")
+    with open(dirs_path, "w", encoding="utf-8") as f:
+        json.dump(meta_dirs, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
     return out_path
 
 
