@@ -1,8 +1,24 @@
 {
   "label": "2026-06-09",
   "date": "2026-06-09",
-  "generated_at": "2026-06-09T03:35:32",
-  "count": 0,
-  "papers": [],
+  "generated_at": "2026-06-09T08:00:50",
+  "count": 1,
+  "papers": [
+    {
+      "paper_id": "202606/09/2606.04248-rsc-decentralized-rigid-formation-flocking-for-large-scale-swarms-via-hybrid-predictive-control-and-online-reconfiguration",
+      "section": "quick",
+      "title_en": "RSC: Decentralized Rigid Formation Flocking for Large-Scale Swarms via Hybrid Predictive Control and Online Reconfiguration",
+      "authors": "Ganyu Zou, Linhan Wang, Chen Dai, Siji Chen, Chang-Tien Lu",
+      "date": "2026-06-02",
+      "pdf": "https://arxiv.org/pdf/2606.04248v1",
+      "score": "0.0",
+      "evidence": "",
+      "tldr": "现有去中心化刚性编队控制难以在复杂环境中维持严格间距，易陷入局部极小值或振荡。为此提出RSC框架，融合混合预测控制与在线重构机制。该方法通过有限视界轨迹预测结合反应式势场确保安全，并利用稳定角色交换加速编队重组。在25架无人机实验中，RSC实现83%成功率，显著优于基线方法。该研究为大规模集群提供了高可靠性的刚性编队导航方案。",
+      "tags": "",
+      "abstract_en": "Decentralized rigid formation flocking requires a swarm of autonomous agents to maintain a predetermined geometric configuration while moving, relying solely on local sensing and communication. However, existing decentralized control methods struggle to maintain strict inter-agent distance constraints in cluttered environments, often suffering from local minima deadlocks, high frequency control oscillations, or limited flexibility during obstacle navigation, resulting in low success rate. To address these limitations, we propose Rigid Swarm Control (RSC), a decentralized control framework for large-scale rigid formation flocking. To escape local minima via robust long-term planning while ensuring short-term safety, RSC integrates finite-horizon trajectory predictions with a reactive artificial potential field (APF) safety controller within a hybrid architecture. Furthermore, to accelerate formation reassembly after obstacle traversal without interrupting task execution, RSC introduces an online leader-follower reconfiguration mechanism based on stable role exchange. Extensive evaluations in challenging cluttered environments with 25 UAVs demonstrate that RSC reliably unifies rigid formation maintenance, obstacle avoidance, and target tracking. Under strict success criteria - collision-free operation with a maximum relative edge-length error below 10%, RSC achieves an 83% success rate, significantly outperforming existing heuristic and learning-based baselines that fall below 5%.",
+      "source": "arxiv",
+      "selection_source": "manual_input"
+    }
+  ],
   "errors": []
 }
