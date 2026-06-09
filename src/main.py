@@ -252,6 +252,7 @@ def main() -> None:
         [
             python,
             os.path.join(SRC_DIR, "6.generate_docs.py"),
+            "--mode", "manual",
         ],
         env=resolve_summary_step_env(),
     )

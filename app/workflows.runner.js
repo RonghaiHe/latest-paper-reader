@@ -946,9 +946,18 @@ window.DPRWorkflowRunner = (function () {
         if (prevStateKey !== stateKey) {
           loadRecentRuns();
         }
-        // 成功完成后自动刷新页面，使新论文出现在侧边栏和首页
+        // 成功完成后等待 GitHub Pages 部署，再刷新页面以显示新论文
         if (run.conclusion === 'success') {
-          setTimeout(() => { window.location.reload(); }, 1500);
+          let countdown = 45;
+          const tick = () => {
+            setStatus(`处理完成，${countdown} 秒后自动刷新页面以显示新论文...`, '#1565c0', { waiting: true });
+            if (--countdown <= 0) {
+              window.location.reload();
+            } else {
+              setTimeout(tick, 1000);
+            }
+          };
+          tick();
         }
       } else {
         setStatus('运行中：每 5 秒自动刷新...', '#1565c0', { waiting: true });
