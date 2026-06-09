@@ -603,7 +603,7 @@ html {
 #paper-chat-container {
   position: relative;
   background: transparent; /* 聊天区背景透明，融入页面 */
-  padding-bottom: 120px; /* 为浮动输入框预留空间 */
+  padding-bottom: 180px; /* 为浮动输入框预留空间 */
 }
 
 /* 纯白遮罩：从输入框顶部到页面底部 */
