@@ -1,0 +1,429 @@
+Title: RSC: Decentralized Rigid Formation Flocking for Large-Scale Swarms via Hybrid Predictive Control and Online Reconfiguration
+
+URL Source: https://arxiv.org/pdf/2606.04248v1
+
+Published Time: Thu, 04 Jun 2026 00:22:44 GMT
+
+Number of Pages: 8
+
+Markdown Content:
+# RSC: Decentralized Rigid Formation Flocking for Large-Scale Swarms via Hybrid Predictive Control and Online Reconfiguration 
+
+Ganyu Zou, Linhan Wang, Chen Dai, Siji Chen and Chang-Tien Lu 
+
+Abstract — Decentralized rigid formation flocking requires a swarm of autonomous agents to maintain a predetermined geometric configuration while moving, relying solely on local sensing and communication. However, existing decentralized control methods struggle to maintain strict inter-agent distance constraints in cluttered environments, often suffering from local minima deadlocks, high frequency control oscillations, or limited flexibility during obstacle navigation, resulting in low success rate. To address these limitations, we propose Rigid Swarm Control (RSC), a decentralized control framework for large-scale rigid formation flocking. To escape local minima via robust long-term planning while ensuring short-term safety, RSC integrates finite-horizon trajectory predictions with areactive artificial potential field (APF) safety controller within a hybrid architecture. Furthermore, to accelerate formation reassembly after obstacle traversal without interrupting task execution, RSC introduces an online leader-follower reconfig-uration mechanism based on stable role exchange. Extensive evaluations in challenging cluttered environments with 25 
+
+UAVs demonstrate that RSC reliably unifies rigid formation maintenance, obstacle avoidance, and target tracking. Under strict success criteria—collision-free operation with a maximum relative edge-length error below 10% , RSC achieves an 83% 
+
+success rate, significantly outperforming existing heuristic and learning-based baselines that fall below 5% .
+
+I. INTRODUCTION Flocking refers to the coordinated motion of animals or autonomous agents (e.g., birds, fish, and robots), where individuals follow local interaction rules to achieve a shared group objective. Although classical flocking formulations primarily emphasize cohesion and alignment, many large-scale animal groups in nature also maintain recognizable geometric patterns, such as the V-shaped formations of migrating birds or circular milling patterns in schools of fish. This observation suggests that effective coordination inherently involves both motion and shape . In robotic applications, maintaining spatial layouts during motion is critical for complex multi-agent missions, particularly in large-scale swarm deployments. Consistent formations en-able predictable sensing footprints for cooperative search and area coverage, maintain fixed sensor baselines for multi-view perception and localization, and support coordinated maneuvers in escorting or perimeter patrol tasks. Motivated by these insights, we study rigid formation flocking, in which a swarm maintains a predetermined geometric configuration by enforcing a set of inter-UAV distance constraints, thereby preserving global shape during motion. We consider a decen-tralized setting where each UAV computes its control using only onboard sensing and communication with first-order neighbors, without access to global information or requiring a central coordinator.  
+
+> Fig. 1. Obstacle avoidance and rigid formation control of six UAVs via the RSC framework. the top-right inset shows the real-world UAV formation. The top-left inset demonstrates RSC controlling a larger UAV array.
+
+Flocking control for multi-agent systems encompasses heuristic [1], [2], [3], learning-based [4], [5], and optimization-based approaches. A critical bottleneck in de-centralized multi-agent navigation is the susceptibility to 
+
+local minima in cluttered environments. To mitigate this, heuristic methods often rely on auxiliary mechanisms, such as wall-following optimizations [6]. Meanwhile, learning-based methods aim to bypass local minima using enhanced policies derived from imitation learning [7], reinforcement learning exploration [8], or advanced architectures like Dy-namic Graph Neural Networks (DGNNs) [9] and Spatial-Temporal GNNs [10] that leverage rich topological informa-tion. Despite these advances in local decision-making, purely reactive strategies remain fundamentally insufficient for com-plex environments. Optimization-based methods, such as Model Predictive Control (MPC) [11], [12], [13], address this limitation by offering explicit predictive capabilities to avoid local minima; however, their severe computational overhead renders them intractable for large-scale flocking. Consequently, we observe that the fundamental solution lies in endowing agents with global predictive and planning capabilities in a scalable manner. To maintain precise spatial arrangements, various forma-tion control strategies have been developed, including the leader-follower framework[14], [15], [16], the virtual struc-tures framework[17], the Voronoi partition algorithm[18] and the Markov Decision Process (MDP)-based formulations [19]. Among these, the leader–follower paradigm is widely adopted in large-scale swarm operations due to the inherent stability and structural simplicity of the approach. To tackle complex missions that involve formation keeping, obstacle avoidance, and target tracking, this paradigm is increasingly 
+
+> arXiv:2606.04248v1 [cs.RO] 2 Jun 2026
+
+integrated into modern learning-based frameworks [20], [21]. Despite these advancements, research on the rigid forma-tion control of large-scale swarms (e.g., N > 20) remains limited, as the performance of most existing methods de-grades sharply as the swarm size increases. The primary difficulties at such scales are twofold: first, satisfying rigid inter-agent distance constraints with high accuracy; and second, addressing the lack of flexibility at scale , where local disturbances and complex environmental constraints necessitate rapid and distributed topological reconfiguration. To address these limitations, we propose Rigid Swarm Control (RSC) , a decentralized control framework for large-scale rigid formation flocking in cluttered environments. RSC integrates finite-horizon trajectory predictions with APF reactive safety control and online formation reconfiguration, enabling each UAV to maintain rigid distance constraints using only local information. Our framework consists of three components. (1)finite-horizon trajectory predictions :RSC outputs finite-horizon trajectory predictions rather than directly regressing per-step control commands. Per-step con-trols are then derived under explicit feasibility constraints (e.g., velocity and acceleration bounds). This design miti-gates short-sightedness and high-frequency oscillations that are common in one-step regression and improves the learn-ability of long-horizon coordination. (2)Hybrid control :RSC fuses look-ahead guidance from trajectory prediction with the fast near-field reactivity of an APF-style safety controller. APF provides immediate collision avoidance, while predicted trajectories serve as a goal- and formation-aware guidance signal that helps steer away from APF local minima and potential deadlocks. (3)Online leader-follower reconfiguration : RSC introduces a role-exchange mecha-nism that updates leader–follower relations online, enabling rapid reconfiguration and formation reassembly after obstacle traversal without interrupting task execution. We evaluate the method in a challenging setting ( N = 25 with 3–6 randomly distributed obstacles and random initial UAV positions). We define success as collision-free operation while maintaining a maximum relative edge-length error below 10%. Under this criterion, existing learning-based decentralized baselines and APF-based methods achieve suc-cess rates below 5%, whereas RSC attains an 83% success rate. These results indicate that RSC can reliably accomplish the composite task of decentralized rigid formation, obstacle avoidance, and target tracking. Our contributions can be summarized as follows:  
+
+> •
+
+Scalable Decentralized Control Framework (RSC): 
+
+We propose a control framework designed for large-scale multi-agent systems that unifies rigid formation maintenance, obstacle avoidance, and target tracking under local communication constraints.  
+
+> •
+
+Finite-Horizon Trajectory Prediction: We incorpo-rate predictive trajectory planning, improving control smoothness and the learnability of complex swarm behaviors.  
+
+> •
+
+Hybrid Control Mechanism: We fuse finite-horizon predictive guidance with a reactive APF safety con-troller to effectively mitigate local minima and prevent deadlocks in cluttered environments.  
+
+> •
+
+Online Leader-Follower Reconfiguration: We intro-duce a multi-hop message-passing and role-exchange mechanism to dynamically reconfigure leader-follower relations, accelerating stable formation reassembly dur-ing obstacle traversal. II. METHODOLOGY This work focuses on decentralized control for large UAV swarms under local communication, targeting tracking, ob-stacle avoidance, and rigid formation reassembly. To achieve this, we propose an imitation-learning-based GNN finite-horizon trajectory prediction framework. This section is organized as follows: In Section II-A , we construct a centralized APF expert to generate high-quality demonstration data, and define a decentralized APF safety controller for near-field reactivity. In Section II-B , we detail the decentralized learning pol-icy. We introduce a multi-hop GNN that leverages both the communication graph and the leader–follower tree. Instead of regressing per-step commands, the model predicts finite-horizon trajectories, which are then dynamically clipped and fused with the safety APF to ensure feasibility and smoothness. In Section II-C , we present the online leader–follower reconfiguration strategy. We design a lightweight swap oper-ator that dynamically rewires the tree topology based on local information, preventing agent lagging and ensuring rapid formation reassembly in cluttered environments. 
+
+A. Expert Controller and Safety Controller a) Expert Algorithm : Inspired by Chen et al[10] and Zhao et al[16], We construct a centralized expert policy: at each time step, it uses the global state to output an accel-eration command ai for UAV i, and linearly combines three control components—formation keeping, obstacle avoidance, and target (virtual-leader) following: 
+
+ai = w f aform  
+
+> i
+
++ woaobs  
+
+> i
+
++ wgagoal  
+
+> i
+
+. (1) Additionally, the expert applies the Online Leader–Follower Reconfiguration algorithm described in Section II-C. Here, 
+
+aform  
+
+> i
+
+is derived from an improved artificial potential field (APF) for formation control: a structurally constrained at-tractive term drives UAVs to converge to the desired relative configuration, while a Morse-type repulsive potential and a damping term are incorporated to maintain a minimum safety separation and suppress oscillations. The obstacle-avoidance term aobs  
+
+> i
+
+adopts the β -robot projection idea, which models each obstacle as a virtual agent that exerts a repulsive ef-fect to achieve collision-free navigation. The goal-following term agoal  
+
+> i
+
+is a PD-like tracking component with respect to the virtual leader/target to accomplish trajectory following. The final command is saturated under velocity/acceleration constraints and then sent to the low-level controller for execution. b) Safety Controller.: We implement a decentralized APF-based safety controller that makes decisions using only the local observations defined in Section II-B.1 (i.e., without access to global state). Its control structure follows the same APF formulation as the expert policy, but all formation-maintenance potentials are removed; the controller therefore retains only the reactive obstacle-avoidance and goal/virtual-leader tracking terms to produce a safety-oriented command 
+
+ahi,APF . As described in Section II-B.2. 
+
+B. Learning Policy 
+
+In this section, we sequentially introduce the design of local observations, the information flow over the commu-nication graph, the imitation-learning mechanism for finite-horizon trajectory prediction with APF fusion, and the online leader–follower reconfiguration. The processes shown in Figure 2. 
+
+1) Local Observation and Aggregation: The local obser-vation of each UAV is restricted to local relative information, including the relative displacement and relative velocity with respect to neighboring robots, obstacles, and a virtual leader. The local observation of obstacles is defined by rki < Rc,where Rc is the sensing radius and rki is the distance between robot i and the projection of robot i on the k-th obstacle. The leader–follower structure is pre-specified: each fol-lower has a unique leader, thus forming a tree topology[23], [24]. At time step t, the i-th UAV broadcasts all its observa-tion information at time t, denoted by X(t) 
+
+> i
+
+, to all neighbors within its communication range. Meanwhile, it receives the observation information broadcast by all neighbors N i at time t − 1 and processes it in two ways. (1) For all received messages X(t−1) 
+
+> j
+
+, we perform mean aggregation: 
+
+X′(t) 
+
+> i
+
+= 1
+
+N(t)
+
+> i
+
+# ∑
+
+> j∈N(t)
+> i
+
+X(t−1) 
+
+> j
+
+. (2) (2) For formation information, we additionally store the relative displacements between UAV i and all its neighbors, 
+
+pi, j for j ∈ N(t) 
+
+> i
+
+, denoted by P′(t) 
+
+> i
+
+.Assuming each UAV can memorize historical information with a length of L, we apply the same aggregation scheme as in (1) for L rounds. The final mean-aggregated information is 
+
+X(t) 
+
+> is
+
+=
+
+h
+
+X(t) 
+
+> i
+
+l = 1, . . . , L X ′(l)
+
+> i
+
+i
+
+. (3) For formation information, we construct the communication 
+
+Gc using all nodes and edges, and use the following equation to enable follower i to obtain the relative position of its leader 
+
+ℓ(i) within at most L hops: 
+
+pi→ℓ(i)(t) = 
+
+> d−1
+
+# ∑
+
+> m=0
+
+pvm,vm+1 (t − m). (4) where d is the length of the shortest communication path between UAV i and its leader ℓ(i) in the communication graph. we compute the target positions induced by the current formation offsets pℓ(i)→tar (i) (for roots, the target is the virtual target). 
+
+pi→tar (i)(t) = pℓ(i)→tar (i)(t) + pi→ℓ(i)(t). (5) 
+
+2) Finite Horizon Trajectory Prediction with APF Fusion: 
+
+Most decentralized flocking algorithms regress per-step con-trol commands. However, our experiments reveal that such myopic approaches lack the long-term planning necessary for complex coordination in cluttered environments. Inspired by motion planning in autonomous driving[25], [26], [27], we shift from single-step reactive control to finite-horizon trajectory prediction. Consequently, we design the model output as a local trajectory sequence of length H time steps, 
+
+{rhi }H−1 
+
+> h=0
+
+, where rh denotes the relative displacement at step 
+
+h expressed in the local frame whose origin is the current UAV position. Accordingly, the absolute target position at step h is 
+
+ph = p0 + rh, p0 = p(t), v0 = v(t). (6) Since the time increment ∆t between consecutive steps is small, we approximate each step by constant-acceleration motion and discretize the dynamics using the trapezoidal relation ph 
+
+> req
+
+≈ ph + ∆t 
+
+> 2
+
+(vh + vh+1). By inverse dynamics that enforces reaching ph 
+
+> req
+
+within one step, the (unconstrained) desired acceleration at step h is 
+
+ah 
+
+> req
+
+= 2
+
+∆t2
+
+
+
+ph 
+
+> req
+
+− ph − vh∆t
+
+
+
+, h = 0, 1, . . . , H − 1. (7) 
+
+a) Hybrid control (APF fusion).: To improve safety in near-collision situations, we introduce a distance-based blending weight whi ∈ [0, 1] and form a convex combination of the tracking-induced acceleration ahi,req and the decen-tralized APF safety controller output ahi,APF . For UAV i,we define the nearest agent distance as ragent ,hi , the nearest obstacle distance as robs ,hi , the corresponding risk weight and obstacle-induced risk are 
+
+wagent ,hi = max 1 − ragent ,hi
+
+rth 
+
+, 0
+
+!
+
+, (8) 
+
+wobs ,hi = max 1 − robs ,hi
+
+rth 
+
+, 0
+
+!
+
+, (9) and we set 
+
+whi = max 
+
+
+
+wagent ,hi , wobs ,hi
+
+
+
+, (10) The hybrid acceleration command is then given by 
+
+ahi,hyb = ( 1 − whi ) ahi,req + whi ahi,APF . (11) 
+
+b) Unified dynamics constraints and rollout.: We then apply unified dynamic constraints to the hybrid command and roll out the states recursively. We define the ball-clipping projection operator 
+
+Πρ (x) := x · min 
+
+
+
+1, ρ
+
+∥x∥2
+
+
+
+. (12) For each prediction step h and each UAV i, we compute 
+
+ahi = Πamax 
+
+
+
+ahi,hyb 
+
+
+
+, (13) 
+
+vh+1 
+
+> i
+
+= Πvmax 
+
+
+
+vhi + ahi ∆t
+
+
+
+, (14) 
+
+ph+1 
+
+> i
+
+= phi + ∆t
+
+2
+
+
+
+vhi + vh+1
+
+> i
+
+
+
+. (15) Fig. 2. Overview of the RSC framework. Multi-hop aggregation of local observations is utilized as the model input. A hybrid architecture consisting of a transformer encoder[22] and an MLP enables finite-horizon trajectory prediction. The predicted trajectory is combined with an APF safety controller to generate hybrid control. Additionally, an online leader-follower reconfiguration mechanism is introduced to enhance formation flexibility. 
+
+When whi = 0, the controller reduces to pure trajectory tracking; when whi → 1, it smoothly transitions to the APF safety controller. 
+
+C. Online Leader–Follower Reconfiguration 
+
+In preliminary experiments with large swarms, we ob-served a critical failure mode under fixed topologies: des-ignated leaders frequently fall behind their followers when navigating through cluttered regions. Upon exiting the ob-stacle zone, the rest of the formation often completes its assembly. Consequently, the lagging leader becomes physi-cally blocked, unable to overtake its followers due to strict inter-agent collision avoidance constraints, which ultimately causes formation failure. To address this deadlock and improve formation conver-gence, we introduce a lightweight swap operator that locally rewires the tree by exchanging a leader and its follower. In a decentralized setting, the leader makes swap decisions based on locally available (possibly delayed) information. If a swap is accepted, the leader broadcasts the swap command; all agents that receive it apply the same tree update. 
+
+a) Trigger (distance-based).: For agent i, a swap i ↔
+
+ℓ(i) is triggered if both agents would be closer (by a margin 
+
+δ ) to the other agent’s target, i.e., 
+
+∥pi→tar [ℓ(i)] ∥ + δ < ∥pℓ(i)→tar [ℓ(i)] ∥,
+
+∥pℓ(i)→tar (i)∥ + δ < ∥pi→tar (i)∥.
+
+We apply a greedy strategy and perform one call at a time. 
+
+b) Feasibility (connectivity constraint).: Since swap-ping changes multiple parent–child relations, we require all affected agents to remain connected in the current communi-cation graph Gc defined in the previous section. The affected set includes the swapped pair, the old parent of ℓ(i) (if any), the other children of ℓ(i), and all children of i. The leader checks whether the induced subgraph Gc[A] is connected; only then the swap is allowed. 
+
+c) Broadcast, reconnection, and cooldown.: If allowed, the leader broadcasts the swap so that all receiving agents modify the tree consistently. To enable agents that were temporarily outside the communication graph to update immediately after reconnection, each committed swap is associated with a monotonically increasing tree version; a reconnected agent obtains the latest version (and the corre-sponding updates or the current tree) from any neighbor and then updates its local tree. After a tree update, the initiating leader enters a cooldown period and does not issue swap commands to prevent chattering. 
+
+d) Topology update.: Let u be the old parent of ℓ(i).After swapping: (i) i takes over u (if u̸ = /0); (ii) all children of ℓ(i) except i are reattached to i; (iii) ℓ(i) becomes a child of i; (iv) the original subtree of i is transferred to ℓ(i). This preserves a valid tree while changing hierarchy locally. III. SIMULATION AND EXPERIMENT In this section, we describe the configuration of our RSC model, the baseline methods, the evaluation metrics, and the results from both simulation and real-robot experiments. 
+
+A. RSC Model Settings 
+
+The RSC policy takes as input the agent feature vector 
+
+Xi ∈ R18 and the relative position to its assigned leader 
+
+Pi→ℓ(i) ∈ R2, as defined in Sec. II-B1. We adopt a two-stream architecture to decouple global coordination from local formation keeping. 
+
+a) Spatial-context stream.: Xi is first encoded by a two-layer MLP with hidden dimension 256. We then apply a single GraphSAGE convolution layer (hidden dimension 256) to aggregate neighborhood information according to Eq. (4). To model temporal context, we stack the resulting node embeddings over the past L = 3 time steps into a sequence, which is processed by a Transformer encoder (one layer, nh = 4 heads, feed-forward dimension d f f = 256) to extract spatial flocking-related context. 
+
+b) Local-formation stream.: Pi→ℓ(i) is encoded by a two-layer MLP with hidden dimension 256, using LeakyReLU activations and dropout regularization. This stream does not perform neighborhood aggregation to pre-serve stable relative-geometry features for formation keeping. 
+
+c) Trajectory head and execution.: The outputs of the two streams are concatenated into a 512-dimensional latent vector and fed into a two-layer MLP head to predict the finite-horizon trajectory in Sec. II-B2, denoted by ri ∈ RH×2
+
+. The predicted trajectory is integrated with the hybrid controller (APF fusion) and rolled out for H steps under the unified dynamic constraints. 
+
+d) Training with DAgger.: We train the policy inspired by DAgger [28]. After each policy query, the simulator executes either the expert trajectory or the policy trajectory with probabilities α and 1 − α, respectively, where 
+
+k = max (nep − 1000 , 0), α = max (0.99 k, 0.1),
+
+nep denotes the current training epoch number. We store all collected samples in a replay buffer (aggregated dataset) and update the network using mini-batch training by minimizing the ℓ2 loss between the predicted and expert trajectories with the Adam optimizer [29]. Since expert and policy rollouts may diverge, we snapshot the simulator state before rollouts and restore it when generating expert labels to ensure consistent supervision. We primarily train the RSC model with N = 25 UAVs, and train five models with prediction horizons H =
+
+1, 10 , 20 , 30 , 40.The formations for N = 25 is solid squares with five rows by five columns. The leader–follower target distance Rt = 5 m. The training data consist of 500 randomly generated maps with 3–6 obstacles. Obstacles are generated with a uniform distribution within a rectangular region centered at (25 , 0)
+
+with length 20 m and width 30 m, and the obstacle radius is 1 m–2 m.The initial positions of the UAVs are generated by applying a random perturbation, uniformly distributed within a 5 m radius, to each agent’s nominal position in the original formation. The virtual target starts from the origin and moves along the positive x-axis at 3 m /s. In the simulator, the communication radius Rc is set to 6 m, which is 1.2 times the leader–follower target distance. The maximum allowed acceleration is 10 m /s2, and the maximum speed is 10 m /s. The cooldown time of Leader– Follower Reconfiguration is 1 s. The safety distance is 0 .5 m; if the distance between a UAV and other UAVs or obstacle surfaces is smaller than the safety distance, the simulation is terminated early and marked as a failure. All simulations allow all UAVs up to 2100 steps (21s) to leave the obstacle region and complete reconfiguration with a maximum error smaller than 10%; otherwise, it is marked as a failure. We implement our model using PyTorch and the OpenAI gym framework in Python3.9. The server we use has Intel(R) Xeon(R) Platinum 8462Y+ CPU @ 4100MHz, NVIDIA A30 GPU and 24GB RAM. To the best of our knowledge, we cannot find any paper that is highly related to our integrated setting. In the de-centralized flocking field, we use two methods with similar large-scale flocking settings but without rigid formation settings as baselines. These two methods are the APF-based Olfati-Saber’s decentralized flocking algorithm and the imitation-learning-based STGNN decentralized flocking algorithm. For fairness, we add a formation potential field consistent with the expert to Olfati-Saber’s algorithm, add the observations required for rigid formation to the STGNN model, and conduct imitation learning with the same expert. 
+
+B. Metrics 
+
+1) Success Rate (S%). The probability that the UAV swarm successfully leaves the obstacle region and reconfigures into a rigid formation. The detailed defini-tion of success is the same as that in Sec. III-A; higher is better. The maximum formation error is defined as ME = max 
+
+> i
+
+Pi→ℓ(i) 2 − Rt
+
+Rt
+
+. (16) 2) Formation Time ( τ). The time required for the UAV swarm to achieve Success ; shorter is better. 3) Mean Absolute Error ( MAE ). This metric measures the error between the predicted trajectories (before APF fusion) and the expert demonstrations. Although it lacks a direct correlation with the final task success rate, we retain it as an essential reference metric for imitation learning. To ensure a fair comparison across different prediction horizon lengths H, we report the normalized metric MAE = MAE sum /H. A smaller value indicates better prediction accuracy. 4) Non-collision Failure Rate (D%) All failures other than collisions are counted as non-collision failures. In our setting, non-collision failures mainly occur when UAVs get stuck around obstacles or when agents mutually block the occupation of target slots in the formation. Once such situations arise, they are likely to persist for the remainder of the episode, and thus can be understood as deadlock-like behavior in decen-tralized coordination. Smaller is better. 
+
+C. Experimental Results 
+
+We train one RSC model for each setting described in Section III-A. Each model is trained for 4000 epochs with a learning rate of 3 × 10 −4.For all tests, we use a newly generated test set consisting of 200 maps, where the map generation procedure is the same as that of the training set. The UAV positions are sampled using the same procedure as in the training set, but with different random seeds. For each model, we repeat the evaluation on the test set with three different seeds, resulting in 600 test runs in total, and report the mean value as the final result. 
+
+a) Evaluation on Model Performance: In this set of ex-periment, five RSC models with different prediction horizon lengths H are evaluated. The update rule of these models is as follows: in the simulator, the system is updated entirely based on the model-predicted trajectories and the APF fusion results; after a total of H updates, the model produces another output. The Online Leader–Follower Reconfiguration mech-anism is also enabled. In addition, the Expert is evaluated as the best reference, and two improved baselines are included for comparison. All methods are tested with 25 UAVs in a solid-square formation, and the results are reported in Table I. In Table I, we evaluate the swarm reconfiguration task with 
+
+N = 25. Among all non-Expert methods, RSC-H20 achieves the best overall performance, attaining the highest success TABLE I TEST RESULTS OF N = 25. H DENOTES THE TRAJECTORY LENGTH. RSC-H20 ACHIEVES THE BEST PERFORMANCE. 
+
+Model S(%) τ MAE (1 × 10 −4) D(%)
+
+Expert 96.00 13.06 – 3.00 Saber 5.00 15.47 – 39.50 STGNN L3 0.00 – – 72.00 RSC-H1 0.00 – 4.00 95.50 RSC-H10 58.50 13.11 6.20 23.00 RSC-H20 83.00 13.17 7.90 2.50 
+
+RSC-H30 81.50 13.32 11.17 3.00 RSC-H40 82.50 13.62 13.48 2.50 
+
+rate and the lowest non-collision failure rate. Meanwhile, its formation time is also very close to that of the best RSC-H10 model. From the perspective of success rate, the single-step controller Saber, STGNN L3, and the single-step trajectory predictor RSC-H1 all perform poorly. A plausible reason is that single-step methods tend to favor myopic, locally op-timal decisions based on current observations, lacking mid-to long-horizon coordination for obstacle bypassing, yielding behavior, and target-slot assignment during formation. As the prediction horizon H increases, the success rate im-proves significantly, and the RSC models with H = 20 , 30 , 40 exhibit comparable success-rate performance. Together with the non-collision failure rates, these results suggest that multi-step prediction is necessary in rigid swarm-formation scenarios. We argue that multi-step prediction partially cap-tures the long-horizon planning of the centralized expert, mitigating the shortsightedness of single-step predictors and reducing non-collision failures to some extent. Regarding MAE, it increases steadily with a longer predic-tion horizon, indicating reduced similarity to the expert under long-horizon predictions. We attribute this to two factors: (i) longer-horizon predictions lack intermediate observation-based corrections, making errors more likely to accumulate over time; and (ii) longer horizons require covering a richer set of behavior modes and scenario combinations, which increases learning difficulty and can degrade prediction ac-curacy. 
+
+b) Evaluation on Scalability and Transferability: In these experiments, we evaluate scalability and transferability by training three separate models of the best-performing variants—RSC-H20, RSC-H30, and RSC-40—using aswarm size of N = 25. We then test each model on three formation configurations. For N = 6 and N = 12, the target formation is a hollow equilateral triangle; for N = 36, the target formation is a dense 6 × 6 square grid. All other experimental settings are kept identical to those in the previous experiment. Notably, these swarm sizes ( N > 10) are unusually large in decentralized rigid formation control; to the best of our knowledge, prior work rarely reports evaluations at comparable scales. The results are summarized in Table II. As shown in Table II, the results across different swarm sizes N exhibit a clear scaling effect : as N increases from   
+
+> Fig. 3. Simulation trajectories of the RSC-H20 model. The top and bottom panels demonstrate the navigation of 25 and 36 UAVs, respectively, within identical cluttered environments (the 9th map in the test set). The black dashed line marks the x-axis position of the rearmost UAV at the exact moment the formation is successfully reassembled. TABLE II RESULTS UNDER DIFFERENT SWARM SIZES N.
+
+N = 6Model S(%) τ MAE (1 × 10 −4) D(%)
+
+Expert 97.00 9.51 – 0.40 RSC-H20 90.50 9.72 11.25 1.00 RSC-H30 95.50 9.61 15.03 0.00 
+
+RSC-H40 92.50 9.77 17.95 1.00 
+
+N = 12 Model S(%) τ MAE (1 × 10 −4) D(%)
+
+Expert 95.40 11.63 – 0.00 RSC-H20 90.00 11.70 7.70 0.00 
+
+RSC-H30 90.50 11.55 13.83 0.00 
+
+RSC-H40 87.50 11.74 11.01 2.00 
+
+N = 36 Model S(%) τ MAE (1 × 10 −4) D(%)
+
+Expert 89.80 15.17 – 6.80 RSC-H20 76.00 15.43 9.10 2.00 
+
+RSC-H30 76.50 15.53 12.03 2.50 RSC-H40 73.00 15.52 15.10 2.50 
+
+6 to 36, the success rate S generally decreases while the completion time τ increases, indicating that larger-scale decentralized formation control poses greater coordination and stability challenges. Nevertheless, although all learning-based models are trained only in the N = 25 setting, they remain effective when evaluated on both smaller swarms (N = 6, 12) and a larger swarm ( N = 36), demonstrating good transferability/generalization to varying swarm sizes. Notably, in the large-scale case ( N = 36), the learned models are more advantageous in terms of avoiding deadlocks :their deadlock rates D stay within 2 .0% ∼ 2.5%, which is substantially lower than the Expert’s 6 .8%. Overall, the three variants (RSC-20, RSC-30, and RSC-40) show no pronounced differences across swarm sizes; however, RSC-40 is slightly weaker , as reflected by its lower success rates and the higher deadlock rate at N = 12, suggesting that this TABLE III ABLATION STUDY                            
+
+> M1M2S(%)τMAE (1×10 −4)D(%)
+> ✓✓83.00 13.17 7.90 2.50
+> ×✓78.50 13.05 8.35 2.50
+> ✓×49.50 13.01 7.75 34.00
+> ××38.00 12.08 8.75 36.00
+
+variant does not provide consistent benefits when scaling. 
+
+D. Ablation Study 
+
+In this set of experiments, we conduct ablation studies on two key components: APF fusion (M1) and Online Leader– Follower Reconfiguration (M2). All experiments use the RSC-H20 model and follow the same settings as Experi-ment a. The results are reported in Table III. From the ablation study, we draw the following conclu-sions. First, M2 (Online Leader–Follower Reconfiguration) is a key factor affecting performance. Removing M2 causes the success rate to drop sharply from 83 .0% to 49 .5%, while the non-collision failure rate D increases from 2 .5% to 34 .0%, indicating that online L–F reconfiguration can effectively mitigate non-collision failures (e.g., deadlocks or stagnation caused by mutual yielding). Second, M1 (APF fu-sion) provides a consistent gain: when M2 is kept, removing 
+
+M1 reduces the success rate by 4 .5 percentage points while D
+
+remains unchanged, suggesting that M1 mainly helps reduce collision-related failures. Finally, removing both M1 and 
+
+M2 yields the worst performance ( S = 38 .0%, D = 36 .0%), verifying that the two components are complementary. When the success rate is low (e.g., S = 49 .5% or 38 .0%), the values of τ and MAE are not strictly comparable: such models typically succeed only on easier maps, and failed episodes are not included in the mean statistics. 
+
+E. Real robot experiment 
+
+We further demonstrate the effectiveness of RSC by ap-plying it to achieve flocking behavior in a group of Bitcraze Crazyflie 2.1 drones. The drones are controlled via the Crazyswarm platform[30], which is built upon the Robot Operating System (ROS) and enables the vehicles to fly in tight, synchronized swarm formations. The positions of the drones are acquired via the LightHouse positioning system, which utilizes SteamVR base stations in conjunction with onboard positioning decks to estimate spatial coordinates. As illustrated in Figure 4, the six drones begin at random loca-tions (top), navigate through the environment while avoiding obstacles (middle), and establish a triangular formation on the opposite side of the obstacles (bottom). IV. CONCLUSIONS In this work, we proposed Rigid Swarm Control (RSC), a decentralized hybrid framework that successfully navigates the trade-off between long-term formation coordination and short-term collision avoidance. By synergizing finite-horizon predictive planning, reactive safety mechanisms, and dy-namic topology reconfiguration, RSC effectively overcomes  
+
+> Fig. 4. The plots from top to bottom show an experiment of six drones starting from random locations, avoiding an obstacle, and achieving a triangular formation.
+
+the deadlocks and local minima that typically plague large-scale swarm navigation in cluttered spaces. Beyond the previously discussed missions, reliably main-taining and reassembling rigid spatial configurations at scale unlocks potential for physically interactive tasks. For in-stance, RSC can be applied to cooperative payload transport, where strict inter-agent distances are mandatory for load bal-ance, or deployed as dynamic communication relay networks in confined subterranean environments. Future research will extend the RSC framework to highly dynamic environments with moving obstacles. Additionally, we plan to investigate the system’s robustness under severely degraded communication channels (e.g., high packet loss and latency) and explore alternative formation paradigms that offer greater flexibility and efficiency than the traditional leader-follower topology. REFERENCES [1] R. Olfati-Saber, “Flocking for Multi-Agent Dynamic Systems: Algo-rithms and Theory,” IEEE Transactions on Automatic Control , vol. 51, pp. 401–420, Mar. 2006. [2] R. Olfati-Saber and R. Murray, “Consensus Problems in Networks of Agents With Switching Topology and Time-Delays,” IEEE Transac-tions on Automatic Control , vol. 49, pp. 1520–1533, Sept. 2004. [3] Z. Pan, C. Zhang, Y. Xia, H. Xiong, and X. Shao, “An Improved Artificial Potential Field Method for Path Planning and Formation Control of the Multi-UAV Systems,” IEEE Transactions on Circuits and Systems II: Express Briefs , vol. 69, pp. 1129–1133, Mar. 2022. [4] E. Tolstaya, F. Gama, J. Paulos, G. Pappas, V. Kumar, and A. Ribeiro, “Learning Decentralized Controllers for Robot Swarms with Graph Neural Networks,” Foundations and Trends® in Machine Learning ,vol. 10, no. 1-2, pp. 1–141, 2017. arXiv:1903.10527 [cs]. [5] E. S. Lee, L. Zhou, A. Ribeiro, and V. Kumar, “Learning Decen-tralized Strategies for a Perimeter Defense Game with Graph Neural Networks,” Sept. 2022. arXiv:2211.01757 [cs]. [6] J. Kim, S. Park, W. Lee, W. Kim, H. Choi, N. Doh, and C. Nam, “Escaping Local Minima: Hybrid Artificial Potential Field with Wall-Follower for Decentralized Multi-Robot Navigation,” in 2025 IEEE International Conference on Robotics and Automation (ICRA) , (At-lanta, GA, USA), pp. 6616–6622, IEEE, May 2025. [7] Y. Moukhlis, B. E. Khamlichi, and A. E. Fallah Seghrouchni, “Towards Solving Multi-Agent Potential Field Local Minimas Through Imitation Learning,” in 2025 IEEE 22nd Consumer Communications &amp; Networking Conference (CCNC) , (Las Vegas, NV, USA), pp. 1–5, IEEE, Jan. 2025. [8] D. Zhang, X. Zhang, Z. Zhang, B. Zhu, and Q. Zhang, “Reinforced Potential Field for Multi-Robot Motion Planning in Cluttered Envi-ronments,” in 2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) , (Detroit, MI, USA), pp. 699–704, IEEE, Oct. 2023. [9] B. Li, X. Zheng, M. Jin, C. Wang, and S. Pan, “Test-time GNN Model Evaluation on Dynamic Graphs,” Sept. 2025. arXiv:2509.23816 [cs]. [10] S. Chen, Y. Sun, P. Li, L. Zhou, and C.-T. Lu, “Learning Decentralized Flocking Controllers with Spatio-Temporal Graph Neural Network,” in 2024 IEEE International Conference on Robotics and Automation (ICRA) , (Yokohama, Japan), pp. 2596–2602, IEEE, May 2024. [11] Y. Kuriki and T. Namerikawa, “Formation Control with Collision Avoidance for a Multi-UAV System Using Decentralized MPC and Consensus-Based Control,” SICE Journal of Control, Measurement, and System Integration , vol. 8, pp. 285–294, July 2015. [12] G. Zhu, Q. Zhang, B. Zhu, and T. Hu, “Heuristic Predictive Control for Multirobot Flocking in Congested Environments,” IEEE/ASME Transactions on Mechatronics , vol. 30, pp. 1435–1446, Apr. 2025. [13] G. Torrente, E. Kaufmann, P. F¨ ohn, and D. Scaramuzza, “Data-Driven MPC for Quadrotors,” IEEE Robotics and Automation Letters , vol. 6, pp. 3769–3776, Apr. 2021. [14] Meng Ji, A. Muhammad, and M. Egerstedt, “Leader-based multi-agent coordination: controllability and optimal control,” in 2006 American Control Conference , (Minneapolis, MN, USA), p. 6 pp., IEEE, 2006. [15] A. M. De Souza Neto and R. A. F. Romero, “A Decentralized Approach to Drone Formation Based on Leader-Follower Technique,” in 2019 Latin American Robotics Symposium (LARS), 2019 Brazilian Symposium on Robotics (SBR) and 2019 Workshop on Robotics in Education (WRE) , (Rio Grande, Brazil), pp. 358–362, IEEE, Oct. 2019. [16] Y. Zhao, L. Jiao, R. Zhou, and J. Zhang, “UAV formation control with obstacle avoidance using improved artificial potential fields,” in 2017 36th Chinese Control Conference (CCC) , (Dalian, China), pp. 6219– 6224, IEEE, July 2017. [17] A. Askari, M. Mortazavi, and H. A. Talebi, “UAV Formation Control via the Virtual Structure Approach,” Journal of Aerospace Engineer-ing , vol. 28, p. 04014047, Jan. 2015. [18] J. Hu, M. Wang, C. Zhao, Q. Pan, and C. Du, “Formation control and collision avoidance for multi-UAV systems based on Voronoi partition,” Science China Technological Sciences , vol. 63, pp. 65–72, Jan. 2020. [19] M. A. Azam, H. D. Mittelmann, and S. Ragi, “UAV Formation Shape Control via Decentralized Markov Decision Processes,” Algorithms ,vol. 14, p. 91, Mar. 2021. [20] C. Jiang, X. Huang, and Y. Guo, “End-to-end decentralized formation control using a graph neural network-based learning method,” Fron-tiers in Robotics and AI , vol. 10, p. 1285412, Nov. 2023. [21] X. Qiu, X. Li, J. Wang, Y. Wang, and Y. Shen, “A DRL Based Distributed Formation Control Scheme with Stream-Based Collision Avoidance,” in 2021 IEEE International Conference on Autonomous Systems (ICAS) , (Montreal, QC, Canada), pp. 1–5, IEEE, Aug. 2021. [22] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin, “Attention Is All You Need,” Aug. 2023. arXiv:1706.03762 [cs]. [23] H. Tanner, G. Pappas, and V. Kumar, “Leader-to-formation stability,” 
+
+IEEE Transactions on Robotics and Automation , vol. 20, pp. 443–455, June 2004. [24] J. Desai, J. Ostrowski, and V. Kumar, “Modeling and control of formations of nonholonomic mobile robots,” IEEE Transactions on Robotics and Automation , vol. 17, pp. 905–908, Dec. 2001. [25] M. Bansal, A. Krizhevsky, and A. Ogale, “ChauffeurNet: Learning to Drive by Imitating the Best and Synthesizing the Worst,” in Robotics: Science and Systems XV , Robotics: Science and Systems Foundation, June 2019. [26] Y. Hu, J. Yang, L. Chen, K. Li, C. Sima, X. Zhu, S. Chai, S. Du, T. Lin, W. Wang, L. Lu, X. Jia, Q. Liu, J. Dai, Y. Qiao, and H. Li, “Planning-oriented Autonomous Driving,” in 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , (Vancouver, BC, Canada), pp. 17853–17862, IEEE, June 2023. [27] W. Zeng, W. Luo, S. Suo, A. Sadat, B. Yang, S. Casas, and R. Ur-tasun, “End-to-end Interpretable Neural Motion Planner,” Jan. 2021. arXiv:2101.06679 [cs]. [28] S. Ross, G. J. Gordon, and J. A. Bagnell, “A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning,” Mar. 2011. arXiv:1011.0686 [cs]. [29] D. P. Kingma and J. Ba, “Adam: A Method for Stochastic Optimiza-tion,” Jan. 2017. arXiv:1412.6980 [cs]. [30] J. A. Preiss, W. Honig, G. S. Sukhatme, and N. Ayanian, “Crazyswarm: A large nano-quadcopter swarm,” in 2017 IEEE International Con-ference on Robotics and Automation (ICRA) , (Singapore, Singapore), pp. 3299–3304, IEEE, May 2017.
