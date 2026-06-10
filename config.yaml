@@ -26,20 +26,6 @@ subscriptions:
 llm:
   default_model: glm/glm-4.7-flash
 user_custom_tags:
-  - name: "deep-learning"
-    description: "æ·±åº¦å­¦ä¹ ç¸å³è®ºæï¼æ¨¡åæ¶æãè®­ç»æå·§ç­ï¼"
-  - name: "nlp"
-    description: "èªç¶è¯­è¨å¤çï¼ææ¬ãè¯­è¨æ¨¡åç­ï¼"
-  - name: "computer-vision"
-    description: "è®¡ç®æºè§è§ï¼å¾åãè§é¢ãå¤æ¨¡æç­ï¼"
-  - name: "reinforcement-learning"
-    description: "å¼ºåå­¦ä¹"
-  - name: "llm-agent"
-    description: "LLM Agent / å·¥å·ä½¿ç¨ / æ¨ç"
-  - name: "efficiency"
-    description: "æ¨¡ååç¼©ãéåãè¸é¦ãé«ææ¨ç"
-  - name: "safety"
-    description: "AI å®å¨ãå¯¹é½ãåè§"
   - name: "optimization"
-    description: "ä¼åçè®ºãç®æ³"
+    description: "Ã¤Â¼ÂÃ¥ÂÂÃ§ÂÂÃ¨Â®ÂºÃ£ÂÂÃ§Â®ÂÃ¦Â³Â"
 source_backends: {}
