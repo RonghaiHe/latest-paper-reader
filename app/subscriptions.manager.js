@@ -656,6 +656,26 @@ window.SubscriptionsManager = (function () {
         <div id="arxiv-search-panel-body" class="dpr-admin-panel-body">
           <div id="dpr-smart-msg" style="font-size:12px; color:#666;">提示：修改后点击「保存」才会写入 config.yaml。</div>
 
+          <div class="dpr-custom-tags-module" style="margin-top:16px; padding:12px; background:#fff8e1; border-radius:8px; border:1px solid #ffe0b2;">
+            <div style="font-weight:600; margin-bottom:8px;">\u81ea\u5b9a\u4e49\u6807\u7b7e\u7ba1\u7406</div>
+            <div style="font-size:12px; color:#795548; margin-bottom:8px;">
+              \u9884\u8bbe\u6807\u7b7e\u5b58\u5728 config.yaml \u7684 user_custom_tags \u5b57\u6bb5\u4e2d\u3002
+              \u6bcf\u5f53\u6709\u65b0\u8bba\u6587\u65f6\u002c LLM \u4f1a\u81ea\u52a8\u5339\u914d\u8fd9\u4e9b\u6807\u7b7e\u5e76\u5199\u5165\u8bba\u6587\u9875 front matter\u3002
+            </div>
+            <div id="dpr-custom-tags-list" style="margin-bottom:8px;">
+              <span style="font-size:12px; color:#999;">\u52a0\u8f7d\u4e2d...</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <input id="dpr-custom-tag-name-input" type="text" placeholder="\u6807\u7b7e\u540d\u79f0 (e.g. nlp)" style="flex:1; padding:4px 8px; font-size:12px; border:1px solid #ccc; border-radius:4px;" />
+              <input id="dpr-custom-tag-desc-input" type="text" placeholder="\u63cf\u8ff0 (e.g. \u81ea\u7136\u8bed\u8a00\u5904\u7406)" style="flex:1; padding:4px 8px; font-size:12px; border:1px solid #ccc; border-radius:4px;" />
+              <button id="dpr-custom-tag-add-btn2" class="arxiv-tool-btn" style="padding:4px 12px; background:#e65100; color:white; white-space:nowrap;">\u6dfb\u52a0</button>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button id="dpr-custom-tag-refresh-btn" class="arxiv-tool-btn" style="padding:2px 10px; font-size:12px;">\u5237\u65b0\u6807\u7b7e</button>
+              <button id="dpr-custom-tag-save-btn" class="arxiv-tool-btn" style="padding:2px 10px; font-size:12px; background:#2e7d32; color:white;">\u4fdd\u5b58\u5230 config.yaml</button>
+            </div>
+          </div>
+
           <div class="dpr-task-danger-module" style="margin-top:16px;">
             <div class="chat-quick-run-title">危险区域</div>
             <div class="dpr-task-danger-desc">恢复初始论文；不删除设置</div>
@@ -680,7 +700,211 @@ window.SubscriptionsManager = (function () {
     msgEl = document.getElementById('dpr-smart-msg');
 
     bindBaseEvents();
+    bindCustomTagsEvents();
   };
+
+  // --- \u81ea\u5b9a\u4e49\u6807\u7b7e\u7ba1\u7406 ---
+  let _cachedCustomTags = [];
+
+  const _loadGithubTokenLocal = () => {
+    try {
+      const s = window.decoded_secret_private || {};
+      if (s.github && s.github.token) return String(s.github.token).trim();
+    } catch {}
+    try {
+      const raw = window.localStorage ? localStorage.getItem('github_token_data') : '';
+      if (!raw) return '';
+      const obj = JSON.parse(raw);
+      return String((obj && obj.token) || '').trim();
+    } catch { return ''; }
+  };
+
+  const _ghFetchLocal = async (token, url, init) => {
+    return await fetch(url, {
+      ...(init || {}),
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+        ...(init && init.headers ? init.headers : {}),
+      },
+    });
+  };
+
+  const _resolveRepoCtxLocal = async (token) => {
+    const url = window.location.href || '';
+    const m = url.match(/https?:\/\/([^.]+)\.github\.io\/([^/]+)/);
+    if (m) return { owner: m[1], repo: m[2] };
+    try {
+      const res = await _ghFetchLocal(token, 'https://api.github.com/user');
+      if (res.ok) {
+        const user = await res.json();
+        const login = user && user.login ? String(user.login) : '';
+        if (login) return { owner: login, repo: 'latest-paper-reader' };
+      }
+    } catch {}
+    return { owner: '', repo: '' };
+  };
+
+  const _encodeContentLocal = (text) => {
+    const bytes = new TextEncoder().encode(text);
+    const bin = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+    return btoa(bin);
+  };
+
+  const loadCustomTagsFromConfig = async () => {
+    const container = document.getElementById('dpr-custom-tags-list');
+    if (!container) return;
+    container.innerHTML = '<span style="font-size:12px; color:#999;">加载中...</span>';
+    const token = _loadGithubTokenLocal();
+    if (!token) {
+      container.innerHTML = '<span style="font-size:12px; color:#c62828;">请先配置 GitHub Token（密钥配置按钮）</span>';
+      return;
+    }
+    const repoCtx = await _resolveRepoCtxLocal(token);
+    if (!repoCtx.owner || !repoCtx.repo) {
+      container.innerHTML = '<span style="font-size:12px; color:#c62828;">无法确定仓库</span>';
+      return;
+    }
+    try {
+      const url = `https://api.github.com/repos/${repoCtx.owner}/${repoCtx.repo}/contents/config.yaml`;
+      const res = await _ghFetchLocal(token, url);
+      if (!res.ok) {
+        container.innerHTML = '<span style="font-size:12px; color:#c62828;">读取 config.yaml 失败</span>';
+        return;
+      }
+      const data = await res.json();
+      const decoded = atob(data.content);
+      const tagMatch = decoded.match(/user_custom_tags:\s*\n((?:\s+- name:.*\n(?:\s+description:.*\n)?)*)/);
+      if (!tagMatch) {
+        container.innerHTML = '<span style="font-size:12px; color:#999;">未找到 user_custom_tags，请先在 config.yaml 中添加</span>';
+        _cachedCustomTags = [];
+        return;
+      }
+      const block = tagMatch[1];
+      const tags = [...block.matchAll(/\s+- name:\s*["']?([^"'\n]+)["']?\s*\n\s+description:\s*["']?([^"'\n]*)["']?/g)].map(m => ({ name: m[1].trim(), description: m[2].trim() }));
+      _cachedCustomTags = tags;
+      renderCustomTagsList(tags);
+    } catch (e) {
+      container.innerHTML = `<span style="font-size:12px; color:#c62828;">加载失败: ${e.message}</span>`;
+    }
+  };
+
+  const renderCustomTagsList = (tags) => {
+    const container = document.getElementById('dpr-custom-tags-list');
+    if (!container) return;
+    if (!tags.length) {
+      container.innerHTML = '<span style="font-size:12px; color:#999;">暂无预设标签</span>';
+      return;
+    }
+    container.innerHTML = tags.map(t =>
+      `<span class="tag-label tag-custom" style="display:inline-flex; align-items:center; gap:4px; margin:2px 4px 2px 0;">
+        ${escapeHtml(t.name)}
+        <button class="tag-remove-btn" data-tag-name="${escapeHtml(t.name)}" style="font-size:12px;">x</button>
+      </span>`
+    ).join(' ');
+  };
+
+  const saveCustomTagsToConfig = async (tags) => {
+    const token = _loadGithubTokenLocal();
+    if (!token) { alert('请先配置 GitHub Token'); return false; }
+    const repoCtx = await _resolveRepoCtxLocal(token);
+    if (!repoCtx.owner || !repoCtx.repo) { alert('无法确定仓库'); return false; }
+    try {
+      const url = `https://api.github.com/repos/${repoCtx.owner}/${repoCtx.repo}/contents/config.yaml`;
+      const res = await _ghFetchLocal(token, url);
+      if (!res.ok) { alert('读取 config.yaml 失败'); return false; }
+      const data = await res.json();
+      const sha = data.sha;
+      const decoded = atob(data.content);
+
+      const tagYaml = tags.length
+        ? '\nuser_custom_tags:\n' + tags.map(t => `  - name: "${t.name}"\n    description: "${t.description}"`).join('\n')
+        : '';
+
+      let newContent;
+      if (decoded.includes('user_custom_tags:')) {
+        newContent = decoded.replace(/\nuser_custom_tags:[\s\S]*?(?=\n\w|$)/, tagYaml || '');
+      } else {
+        newContent = decoded.trimEnd() + '\n' + tagYaml + '\n';
+      }
+
+      const body = {
+        message: '[config] update user_custom_tags',
+        content: _encodeContentLocal(newContent),
+        sha: sha,
+      };
+      const updateRes = await _ghFetchLocal(token, url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (updateRes.ok) {
+        _cachedCustomTags = tags;
+        renderCustomTagsList(tags);
+        return true;
+      } else {
+        const err = await updateRes.text();
+        alert(`保存失败: ${err}`);
+        return false;
+      }
+    } catch (e) {
+      alert(`保存失败: ${e.message}`);
+      return false;
+    }
+  };
+
+  const bindCustomTagsEvents = () => {
+    const refreshBtn = document.getElementById('dpr-custom-tag-refresh-btn');
+    if (refreshBtn && !refreshBtn._bound) {
+      refreshBtn._bound = true;
+      refreshBtn.addEventListener('click', loadCustomTagsFromConfig);
+    }
+    const addBtn = document.getElementById('dpr-custom-tag-add-btn2');
+    if (addBtn && !addBtn._bound) {
+      addBtn._bound = true;
+      addBtn.addEventListener('click', async () => {
+        const nameInput = document.getElementById('dpr-custom-tag-name-input');
+        const descInput = document.getElementById('dpr-custom-tag-desc-input');
+        const name = (nameInput ? nameInput.value : '').trim();
+        const desc = (descInput ? descInput.value : '').trim();
+        if (!name) { alert('请输入标签名称'); return; }
+        if (_cachedCustomTags.some(t => t.name === name)) {
+          alert('标签已存在');
+          return;
+        }
+        _cachedCustomTags.push({ name, description: desc });
+        renderCustomTagsList(_cachedCustomTags);
+        if (nameInput) nameInput.value = '';
+        if (descInput) descInput.value = '';
+      });
+    }
+    const saveBtn = document.getElementById('dpr-custom-tag-save-btn');
+    if (saveBtn && !saveBtn._bound) {
+      saveBtn._bound = true;
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+        const ok = await saveCustomTagsToConfig(_cachedCustomTags);
+        saveBtn.disabled = false;
+        saveBtn.textContent = ok ? '已保存' : '保存失败';
+        setTimeout(() => { saveBtn.textContent = '保存到 config.yaml'; }, 2000);
+      });
+    }
+    // 委托事件处理删除按钮
+    const container = document.getElementById('dpr-custom-tags-list');
+    if (container && !container._boundRemove) {
+      container._boundRemove = true;
+      container.addEventListener('click', (e) => {
+        const btn = e.target.closest('.tag-remove-btn');
+        if (!btn) return;
+        const tagName = btn.getAttribute('data-tag-name');
+        if (!tagName) return;
+        _cachedCustomTags = _cachedCustomTags.filter(t => t.name !== tagName);
+        renderCustomTagsList(_cachedCustomTags);
+      });
+    }
+  };
+  // --- \u81ea\u5b9a\u4e49\u6807\u7b7e\u7ba1\u7406\u7ed3\u675f ---
 
   const renderFromDraft = () => {
     const cfg = draftConfig || {};
@@ -796,6 +1020,7 @@ window.SubscriptionsManager = (function () {
     } else {
       loadSubscriptions();
     }
+    setTimeout(() => loadCustomTagsFromConfig(), 500);
   };
 
   const bindBaseEvents = () => {

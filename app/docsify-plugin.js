@@ -4427,6 +4427,12 @@ window.$docsify = {
         if (meta.tags && meta.tags.length) {
           lines.push(`<p><strong>Tags</strong>: ${renderTags(meta.tags)}</p>`);
         }
+        if (meta.custom_tags && meta.custom_tags.length) {
+          const withRemove = meta.custom_tags.map(t =>
+            `<span class="tag-label tag-custom">${escapeHtml(t)} <button class="tag-remove-btn" data-tag="${escapeHtml(t)}">×</button></span>`
+          ).join(' ');
+          lines.push(`<p><strong>自定义标签</strong>: ${withRemove} <button class="tag-add-btn" id="custom-tag-add-btn" title="添加自定义标签">+</button></p>`);
+        }
         if (meta.score !== undefined && meta.score !== null) {
           lines.push(`<p><strong>Score</strong>: ${escapeHtml(String(meta.score))}</p>`);
         }
@@ -4529,6 +4535,209 @@ window.$docsify = {
         'dpr-deferred-assets-ready',
         refreshDeferredPageEnhancements,
       );
+
+      // --- 自定义标签管理（GitHub API） ---
+      const _loadGithubToken = () => {
+        try {
+          const s = window.decoded_secret_private || {};
+          if (s.github && s.github.token) return String(s.github.token).trim();
+        } catch {}
+        try {
+          const raw = window.localStorage ? localStorage.getItem('github_token_data') : '';
+          if (!raw) return '';
+          const obj = JSON.parse(raw);
+          return String((obj && obj.token) || '').trim();
+        } catch { return ''; }
+      };
+      const _ghFetch = async (token, url, init) => {
+        return await fetch(url, {
+          ...(init || {}),
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            ...(init && init.headers ? init.headers : {}),
+          },
+        });
+      };
+      const _encodeContent = (text) => {
+        const bytes = new TextEncoder().encode(text);
+        const bin = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+        return btoa(bin);
+      };
+      const _resolveRepoCtx = async (token) => {
+        const url = window.location.href || '';
+        const m = url.match(/https?:\/\/([^.]+)\.github\.io\/([^/]+)/);
+        if (m) return { owner: m[1], repo: m[2], defaultBranch: 'main' };
+        try {
+          const res = await _ghFetch(token, 'https://api.github.com/user');
+          if (res.ok) {
+            const user = await res.json();
+            const login = user && user.login ? String(user.login) : '';
+            if (login) return { owner: login, repo: 'latest-paper-reader', defaultBranch: 'main' };
+          }
+        } catch {}
+        return { owner: '', repo: '', defaultBranch: 'main' };
+      };
+
+      const _updatePaperMdTag = async (filePath, tag, action) => {
+        const token = _loadGithubToken();
+        if (!token) { alert('请先配置 GitHub Token（设置 > GitHub Token）'); return false; }
+        const repoCtx = await _resolveRepoCtx(token);
+        if (!repoCtx.owner || !repoCtx.repo) { alert('无法确定 GitHub 仓库'); return false; }
+        const url = `https://api.github.com/repos/${repoCtx.owner}/${repoCtx.repo}/contents/docs/${filePath}`;
+        const res = await _ghFetch(token, url);
+        if (!res.ok) { alert('无法读取论文文件，请确认 GitHub Token 有写入权限'); return false; }
+        const data = await res.json();
+        const decoded = atob(data.content);
+        const sha = data.sha;
+
+        const { meta, body } = parseFrontMatter(decoded);
+        let tags = Array.isArray(meta.custom_tags) ? meta.custom_tags : [];
+        if (action === 'add') {
+          if (!tags.includes(tag)) tags.push(tag);
+        } else if (action === 'remove') {
+          tags = tags.filter(t => t !== tag);
+        }
+        tags = [...new Set(tags)];
+
+        let newContent;
+        if (tags.length) {
+          const tagsLine = `custom_tags: [${tags.map(t => `"${t}"`).join(', ')}]`;
+          const lines = decoded.split('\n');
+          let found = false;
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].match(/^custom_tags:/)) {
+              lines[i] = tagsLine;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i] === '---' || lines[i].startsWith('---')) {
+                lines.splice(i, 0, tagsLine);
+                break;
+              }
+            }
+          }
+          newContent = lines.join('\n');
+        } else {
+          const lines = decoded.split('\n').filter(l => !l.match(/^custom_tags:/));
+          newContent = lines.join('\n');
+        }
+
+        const body2 = {
+          message: action === 'add' ? `[tag] add custom tag: ${tag}` : `[tag] remove custom tag: ${tag}`,
+          content: _encodeContent(newContent),
+          sha: sha,
+        };
+        const updateRes = await _ghFetch(token, url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body2),
+        });
+        if (updateRes.ok) {
+          return true;
+        } else {
+          const err = await updateRes.text();
+          alert(`更新失败: ${err}`);
+          return false;
+        }
+      };
+
+      const _showTagSelector = async () => {
+        const token = _loadGithubToken();
+        if (!token) { alert('请先配置 GitHub Token'); return; }
+        const repoCtx = await _resolveRepoCtx(token);
+        if (!repoCtx.owner || !repoCtx.repo) { alert('无法确定 GitHub 仓库'); return; }
+        const cfgUrl = `https://api.github.com/repos/${repoCtx.owner}/${repoCtx.repo}/contents/config.yaml`;
+        const res = await _ghFetch(token, cfgUrl);
+        if (!res.ok) { alert('无法读取 config.yaml'); return; }
+        const data = await res.json();
+        const decoded = atob(data.content);
+
+        const tagMatch = decoded.match(/user_custom_tags:\s*\n((?:\s+- name:.*\n(?:\s+description:.*\n)?)*)/);
+        if (!tagMatch) { alert('config.yaml 中未找到 user_custom_tags'); return; }
+        const block = tagMatch[1];
+        const tagNames = [...block.matchAll(/\s+- name:\s*["']?([^"'\n]+)["']?/g)].map(m => m[1].trim()).filter(Boolean);
+        if (!tagNames.length) { alert('预设标签列表为空'); return; }
+
+        const container = document.getElementById('custom-tag-dropdown');
+        if (container) container.remove();
+        const existingBtn = document.getElementById('custom-tag-add-btn');
+        if (!existingBtn) return;
+        const rect = existingBtn.getBoundingClientRect();
+        const dropdown = document.createElement('div');
+        dropdown.id = 'custom-tag-dropdown';
+        dropdown.style.cssText = 'position:fixed;top:' + (rect.bottom + 4) + 'px;left:' + (rect.left) + 'px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;max-height:200px;overflow-y:auto;min-width:160px;';
+        const file = vm && vm.route ? vm.route.file : '';
+        const paperFile = file.replace(/^docs\//, '');
+        tagNames.forEach(name => {
+          const item = document.createElement('div');
+          item.textContent = name;
+          item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:13px;color:#333;';
+          item.addEventListener('mouseenter', () => { item.style.background = '#f5f5f5'; });
+          item.addEventListener('mouseleave', () => { item.style.background = ''; });
+          item.addEventListener('click', async () => {
+            dropdown.remove();
+            const ok = await _updatePaperMdTag(paperFile, name, 'add');
+            if (ok) {
+              const mainContent = document.querySelector('.markdown-section');
+              if (mainContent) {
+                const content = latestPaperRawMarkdown;
+                if (content) {
+                  const { meta: newMeta } = parseFrontMatter(content);
+                  if (newMeta) {
+                    newMeta.custom_tags = [...(Array.isArray(newMeta.custom_tags) ? newMeta.custom_tags : []), name];
+                    const body2 = content.replace(/^---[\s\S]*?---\s*/, '');
+                    const newHtml = renderPaperFromMeta(newMeta) + body2;
+                    mainContent.innerHTML = newHtml;
+                  }
+                }
+              }
+            }
+          });
+          dropdown.appendChild(item);
+        });
+        document.body.appendChild(dropdown);
+        const closeDropdown = (e) => {
+          if (!dropdown.contains(e.target) && e.target !== existingBtn) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeDropdown), 100);
+      };
+
+      const _handleTagRemove = async (e) => {
+        const btn = e.target.closest('.tag-remove-btn');
+        if (!btn) return;
+        const tag = btn.getAttribute('data-tag');
+        if (!tag) return;
+        const file = vm && vm.route ? vm.route.file : '';
+        const paperFile = file.replace(/^docs\//, '');
+        const ok = await _updatePaperMdTag(paperFile, tag, 'remove');
+        if (ok) {
+          const span = btn.closest('.tag-label');
+          if (span) span.remove();
+          const parent = btn.closest('p');
+          if (parent) {
+            const remaining = parent.querySelectorAll('.tag-custom');
+            if (!remaining.length) parent.remove();
+          }
+        }
+      };
+
+      document.addEventListener('click', async (e) => {
+        const addBtn = e.target.closest('#custom-tag-add-btn');
+        if (addBtn) {
+          e.preventDefault();
+          await _showTagSelector();
+          return;
+        }
+        await _handleTagRemove(e);
+      });
+      // --- 自定义标签管理结束 ---
 
       // --- 论文列表页渲染 ---
       const renderPapersListPage = async () => {

@@ -141,6 +141,21 @@ def load_config() -> dict:
         return {}
 
 
+def load_user_custom_tags() -> list[dict]:
+    config = load_config()
+    tags = (config or {}).get("user_custom_tags") or []
+    if isinstance(tags, list):
+        result = []
+        for t in tags:
+            if isinstance(t, dict):
+                name = str(t.get("name") or "").strip()
+                desc = str(t.get("description") or "").strip()
+                if name:
+                    result.append({"name": name, "description": desc})
+        return result
+    return []
+
+
 def resolve_docs_dir() -> str:
     docs_dir = os.getenv("DOCS_DIR")
     config = load_config()
@@ -614,30 +629,21 @@ def generate_glance_overview(
     abstract: str,
     max_retries: int = 3,
     client: DeepSeekClient | None = None,
-) -> str | None:
+    user_tags: list[dict] | None = None,
+) -> Tuple[str | None, list[str]]:
     """
     生成论文速览（包含 TLDR、Motivation、Method、Result、Conclusion）。
-    使用 JSON 结构化输出，确保返回完整的五个字段。
+    同时根据预设标签进行论文分类（合并 LLM 调用）。
+    返回 (glance_text, matched_tag_names)。
     """
     active_client = client or LLM_CLIENT
     if active_client is None:
         log("[WARN] 未配置 LLM_CLIENT，跳过速览生成。")
-        return None
+        return (None, [])
 
     system_prompt = "你是论文速览助手，请用中文生成信息密度高、但不冗长的论文速览。"
-    payload = {"title": title, "abstract": abstract}
-    user_text = json.dumps(payload, ensure_ascii=False)
-    user_prompt = (
-        "请基于上面的 JSON 中的 title 和 abstract，输出一个中文速览摘要，严格返回 JSON（不要输出任何其它文字）：\n"
-        "{\"tldr\":\"...\",\"motivation\":\"...\",\"method\":\"...\",\"result\":\"...\",\"conclusion\":\"...\"}\n"
-        "要求：\n"
-        "- tldr：150-220个中文字符，不是一句话口号；通常写成3-4个短句，按“问题背景→核心方法→关键结果→贡献意义”的顺序组织\n"
-        "- motivation/method/result/conclusion：每个字段30-70个中文字符，通常一句话；对标论文页速览卡片，简洁但必须包含具体信息\n"
-        "- 不要把英文句子放进中文字段；可保留必要英文术语或模型名\n"
-        "Output must be strict JSON only, no markdown, no fences, no extra text."
-    )
 
-    schema = {
+    schema: Dict[str, Any] = {
         "type": "object",
         "properties": {
             "tldr": {"type": "string"},
@@ -649,6 +655,37 @@ def generate_glance_overview(
         "required": ["tldr", "motivation", "method", "result", "conclusion"],
         "additionalProperties": False,
     }
+
+    user_prompt_extra = ""
+    if user_tags:
+        schema["properties"]["matched_tags"] = {
+            "type": "array",
+            "items": {"type": "string"},
+        }
+        tag_lines = "\n".join(
+            f"- {t['name']}: {t['description']}" for t in user_tags if t.get("name")
+        )
+        user_prompt_extra = (
+            "\n\n"
+            "同时，请从以下预设标签中选出适合本论文的标签（可多选 0~多个，也可不选），"
+            "将选中的标签名称放入 matched_tags 数组：\n"
+            f"{tag_lines}"
+        )
+
+    payload = {"title": title, "abstract": abstract}
+    user_text = json.dumps(payload, ensure_ascii=False)
+    user_prompt = (
+        "请基于上面的 JSON 中的 title 和 abstract，输出一个中文速览摘要，严格返回 JSON（不要输出任何其它文字）：\n"
+        "{\"tldr\":\"...\",\"motivation\":\"...\",\"method\":\"...\",\"result\":\"...\",\"conclusion\":\"...\"}"
+        + (",\"matched_tags\":[\"...\"]}" if user_tags else "}")
+        + "\n"
+        "要求：\n"
+        "- tldr：150-220个中文字符，不是一句话口号；通常写成3-4个短句，按问题背景\u2192核心方法\u2192关键结果\u2192贡献意义的顺序组织\n"
+        "- motivation/method/result/conclusion：每个字段30-70个中文字符，通常一句话；对标论文页速览卡片，简洁但必须包含具体信息\n"
+        "- 不要把英文句子放进中文字段；可保留必要英文术语或模型名\n"
+        "Output must be strict JSON only, no markdown, no fences, no extra text."
+        + user_prompt_extra
+    )
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -676,17 +713,28 @@ def generate_glance_overview(
             conclusion = str(obj.get("conclusion") or "").strip()
             if not (tldr and motivation and method and result and conclusion):
                 continue
-            return "\n".join(
-                [
-                    f"**TLDR**：{ensure_single_sentence_end(tldr)} \\",
-                    f"**Motivation**：{ensure_single_sentence_end(motivation)} \\",
-                    f"**Method**：{ensure_single_sentence_end(method)} \\",
-                    f"**Result**：{ensure_single_sentence_end(result)} \\",
-                    f"**Conclusion**：{ensure_single_sentence_end(conclusion)}",
-                ]
+
+            matched_tags: list[str] = []
+            raw_tags = obj.get("matched_tags")
+            if isinstance(raw_tags, list):
+                for t in raw_tags:
+                    label = str(t).strip()
+                    if label:
+                        matched_tags.append(label)
+
+            return (
+                "\n".join(
+                    [
+                        f"**TLDR**：{ensure_single_sentence_end(tldr)} \\",
+                        f"**Motivation**：{ensure_single_sentence_end(motivation)} \\",
+                        f"**Method**：{ensure_single_sentence_end(method)} \\",
+                        f"**Result**：{ensure_single_sentence_end(result)} \\",
+                        f"**Conclusion**：{ensure_single_sentence_end(conclusion)}",
+                    ]
+                ),
+                matched_tags,
             )
         except Exception as e:
-            # 额度不足等“硬失败”不必重试，直接降级
             msg = str(e)
             if (
                 "insufficient_user_quota" in msg
@@ -698,7 +746,7 @@ def generate_glance_overview(
                 break
             log(f"[WARN] 速览生成失败（第 {attempt} 次）：{e}")
             time.sleep(2 * attempt)
-    return None
+    return (None, [])
 
 
 def build_glance_fallback(paper: Dict[str, Any]) -> str:
@@ -1457,6 +1505,9 @@ def build_markdown_content(
     if tags_list:
         # 保留完整的 kind:label 格式，前端渲染时再处理
         lines.append(f"tags: [{', '.join(yaml_escape_value(t) for t in tags_list)}]")
+    custom_tags = paper.get("custom_tags") or []
+    if isinstance(custom_tags, list) and custom_tags:
+        lines.append(f"custom_tags: [{', '.join(yaml_escape_value(t) for t in custom_tags)}]")
     if score is not None:
         lines.append(f"score: {score}")
     if evidence:
@@ -1536,9 +1587,23 @@ def process_paper(
     pdf_url = str(paper.get("link") or paper.get("pdf_url") or "").strip()
     paper_llm_client = create_llm_client()
 
+    user_tags_cfg = load_user_custom_tags()
+
     glance = ""
 
     if os.path.exists(md_path):
+        # 已有文件：保留已有的 custom_tags（不覆盖手动添加的）
+        try:
+            with open(md_path, "r", encoding="utf-8") as f_meta:
+                existing_for_meta = f_meta.read()
+            existing_meta_early = _parse_front_matter(existing_for_meta)
+            existing_custom = existing_meta_early.get("custom_tags") or []
+            if isinstance(existing_custom, list) and existing_custom:
+                paper["custom_tags"] = [str(t).strip() for t in existing_custom if str(t).strip()]
+            elif isinstance(existing_custom, str) and existing_custom.strip():
+                paper["custom_tags"] = [t.strip() for t in existing_custom.split(",") if t.strip()]
+        except Exception:
+            pass
         # 即使是 glance-only，也要确保生成/补齐 .txt（用于前端聊天上下文等）
         if glance_only and pdf_url:
             try:
@@ -1652,7 +1717,9 @@ def process_paper(
         # 已存在速览则默认不重复生成（避免重复 LLM 调用），除非 force_glance=true
         has_glance = "## 速览" in existing
         if force_glance or not has_glance:
-            glance = generate_glance_overview(title, abstract_en, client=paper_llm_client) or build_glance_fallback(paper)
+            glance, _ = generate_glance_overview(title, abstract_en, client=paper_llm_client)
+            if not glance:
+                glance = build_glance_fallback(paper)
             if glance:
                 paper["_glance_overview"] = glance
 
@@ -1737,9 +1804,13 @@ def process_paper(
             paper["_figure_assets"] = figures
         if tables:
             paper["_table_assets"] = tables
-        glance = generate_glance_overview(title, abstract_en, client=paper_llm_client) or build_glance_fallback(paper)
+        glance, matched_tags = generate_glance_overview(title, abstract_en, client=paper_llm_client, user_tags=user_tags_cfg)
+        if not glance:
+            glance = build_glance_fallback(paper)
         if glance:
             paper["_glance_overview"] = glance
+        if not paper.get("custom_tags"):
+            paper["custom_tags"] = matched_tags or []
         tags_list = build_tags_list(section, paper.get("llm_tags") or [])
         content = build_markdown_content(paper, section, "", "", tags_list)
         os.makedirs(os.path.dirname(md_path), exist_ok=True)
@@ -1763,9 +1834,13 @@ def process_paper(
 
     zh_title, zh_abstract = translate_title_and_abstract_to_zh(title, abstract_en, client=paper_llm_client)
     tags_list = build_tags_list(section, paper.get("llm_tags") or [])
-    glance = generate_glance_overview(title, abstract_en, client=paper_llm_client) or build_glance_fallback(paper)
+    glance, matched_tags = generate_glance_overview(title, abstract_en, client=paper_llm_client, user_tags=user_tags_cfg)
+    if not glance:
+        glance = build_glance_fallback(paper)
     if glance:
         paper["_glance_overview"] = glance
+    if not paper.get("custom_tags"):
+        paper["custom_tags"] = matched_tags or []
     content = build_markdown_content(paper, section, zh_title, zh_abstract, tags_list)
 
     os.makedirs(os.path.dirname(md_path), exist_ok=True)
