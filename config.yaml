@@ -26,20 +26,6 @@ subscriptions:
 llm:
   default_model: glm/glm-4.7-flash
 user_custom_tags:
-  - name: "deep-learning"
-    description: "深度学习相关论文（模型架构、训练技巧等）"
-  - name: "nlp"
-    description: "自然语言处理（文本、语言模型等）"
-  - name: "computer-vision"
-    description: "计算机视觉（图像、视频、多模态等）"
-  - name: "reinforcement-learning"
-    description: "强化学习"
-  - name: "llm-agent"
-    description: "LLM Agent / 工具使用 / 推理"
-  - name: "efficiency"
-    description: "模型压缩、量化、蒸馏、高效推理"
-  - name: "safety"
-    description: "AI 安全、对齐、偏见"
   - name: "optimization"
-    description: "优化理论、算法"
+    description: "Ã¤Â¼ÂÃ¥ÂÂÃ§ÂÂÃ¨Â®ÂºÃ£ÂÂÃ§Â®ÂÃ¦Â³Â"
 source_backends: {}
