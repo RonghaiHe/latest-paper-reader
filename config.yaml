@@ -27,19 +27,19 @@ llm:
   default_model: glm/glm-4.7-flash
 user_custom_tags:
   - name: "deep-learning"
-    description: "深度学习相关论文（模型架构、训练技巧等）"
+    description: "æ·±åº¦å­¦ä¹ ç¸å³è®ºæï¼æ¨¡åæ¶æãè®­ç»æå·§ç­ï¼"
   - name: "nlp"
-    description: "自然语言处理（文本、语言模型等）"
+    description: "èªç¶è¯­è¨å¤çï¼ææ¬ãè¯­è¨æ¨¡åç­ï¼"
   - name: "computer-vision"
-    description: "计算机视觉（图像、视频、多模态等）"
+    description: "è®¡ç®æºè§è§ï¼å¾åãè§é¢ãå¤æ¨¡æç­ï¼"
   - name: "reinforcement-learning"
-    description: "强化学习"
+    description: "å¼ºåå­¦ä¹"
   - name: "llm-agent"
-    description: "LLM Agent / 工具使用 / 推理"
+    description: "LLM Agent / å·¥å·ä½¿ç¨ / æ¨ç"
   - name: "efficiency"
-    description: "模型压缩、量化、蒸馏、高效推理"
+    description: "æ¨¡ååç¼©ãéåãè¸é¦ãé«ææ¨ç"
   - name: "safety"
-    description: "AI 安全、对齐、偏见"
+    description: "AI å®å¨ãå¯¹é½ãåè§"
   - name: "optimization"
-    description: "优化理论、算法"
+    description: "ä¼åçè®ºãç®æ³"
 source_backends: {}
