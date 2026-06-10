@@ -6984,3 +6984,159 @@ body.dpr-paper-page.dpr-pdf-preview-open article.markdown-section {
   background: #c0392b;
   transform: scale(1.2);
 }
+
+/* ─── 回收站：右键菜单 ─── */
+.dpr-ctx-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  padding: 4px 0;
+  font-size: 13px;
+  user-select: none;
+}
+.dpr-ctx-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dpr-ctx-menu-item:hover {
+  background: #f0f0f0;
+}
+.dpr-ctx-menu-item.danger {
+  color: #e74c3c;
+}
+.dpr-ctx-menu-item.danger:hover {
+  background: #fdecea;
+}
+
+/* ─── 回收站页面 ─── */
+.dpr-recycle-bin-page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+.dpr-recycle-bin-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #33495e !important;
+  margin: 0 0 6px;
+}
+.dpr-recycle-bin-desc {
+  font-size: 13px;
+  color: #888;
+  margin: 0 0 16px;
+}
+.dpr-recycle-bin-actions-bar {
+  margin-bottom: 16px;
+}
+.dpr-recycle-bin-empty {
+  text-align: center;
+  padding: 40px 0;
+  color: #aaa;
+}
+.dpr-recycle-bin-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.dpr-recycle-bin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dpr-recycle-bin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  background: #fafbfc;
+  transition: background 0.15s;
+}
+.dpr-recycle-bin-item:hover {
+  background: #f0f4f8;
+}
+.dpr-recycle-bin-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.dpr-recycle-bin-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #33495e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dpr-recycle-bin-item-meta {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+.dpr-recycle-bin-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.dpr-recycle-bin-btn {
+  padding: 5px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dpr-recycle-bin-btn:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+.dpr-recycle-bin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dpr-recycle-bin-btn-restore {
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.dpr-recycle-bin-btn-restore:hover {
+  background: #e8f5e9;
+  border-color: #81c784;
+}
+.dpr-recycle-bin-btn-delete {
+  color: #e74c3c;
+  border-color: #f5b7b1;
+}
+.dpr-recycle-bin-btn-delete:hover {
+  background: #fdecea;
+  border-color: #e57373;
+}
+.dpr-recycle-bin-btn-clean {
+  padding: 6px 16px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.dpr-recycle-bin-btn-clean:hover {
+  background: #c0392b;
+}
+.dpr-recycle-bin-btn-clean:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dpr-recycle-bin-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+  font-size: 14px;
+}

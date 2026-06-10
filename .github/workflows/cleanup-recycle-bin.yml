@@ -1,0 +1,154 @@
+name: cleanup-recycle-bin
+
+on:
+  schedule:
+    - cron: "0 19 * * *"  # 每天 UTC 19:00（北京时间 03:00）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cleanup-recycle-bin
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Process delete queue and cleanup expired files
+        run: |
+          set -euo pipefail
+
+          QUEUE_FILE="archive/delete-queue.json"
+          SIDEBAR_FILE="docs/_sidebar.md"
+          RECYCLE_DIR="archive/recycle-bin"
+          RETENTION_DAYS=30
+
+          # ─── 1. 处理 delete-queue.json ───
+          if [ ! -f "$QUEUE_FILE" ]; then
+            echo "delete-queue.json 不存在，跳过队列处理。"
+          else
+            QUEUE_COUNT=$(python3 -c "
+          import json, sys
+          with open('$QUEUE_FILE') as f:
+              data = json.load(f)
+          items = data.get('queue', [])
+          print(len(items))
+          " 2>/dev/null || echo "0")
+
+            if [ "$QUEUE_COUNT" -gt 0 ]; then
+              echo "处理 $QUEUE_COUNT 个待删除论文..."
+
+              # 逐项处理：移动文件 + 更新 sidebar
+              python3 << 'PYEOF'
+          import json, os, re, shutil, glob
+
+          QUEUE_FILE = "archive/delete-queue.json"
+          SIDEBAR_FILE = "docs/_sidebar.md"
+          RECYCLE_DIR = "archive/recycle-bin"
+
+          with open(QUEUE_FILE) as f:
+              data = json.load(f)
+
+          queue = data.get("queue", [])
+          processed = []
+
+          for item in queue:
+              paper_id = item.get("paperId", "")
+              file_path = item.get("filePath", "")
+              title = item.get("title", "")
+
+              if not file_path:
+                  print(f"  跳过（无 filePath）: {paper_id}")
+                  processed.append(item)
+                  continue
+
+              src = os.path.join("docs", file_path)
+              dst_dir = os.path.join(RECYCLE_DIR, os.path.dirname(file_path))
+              dst = os.path.join(RECYCLE_DIR, file_path)
+
+              # 移动文件到 recycle-bin
+              if os.path.exists(src):
+                  os.makedirs(dst_dir, exist_ok=True)
+                  shutil.move(src, dst)
+                  print(f"  已移动: {src} -> {dst}")
+              else:
+                  print(f"  文件不存在，跳过: {src}")
+
+              # 从 sidebar 移除匹配行
+              if os.path.exists(SIDEBAR_FILE):
+                  with open(SIDEBAR_FILE, "r", encoding="utf-8") as f:
+                      lines = f.readlines()
+                  new_lines = []
+                  removed = False
+                  for line in lines:
+                      # 匹配 href 中包含 paper_id 的行（日期头行之后的论文条目）
+                      if paper_id and f"href=\"#/{paper_id}\"" in line:
+                          removed = True
+                          print(f"  已从 sidebar 移除: {title or paper_id}")
+                          continue
+                      new_lines.append(line)
+                  if removed:
+                      with open(SIDEBAR_FILE, "w", encoding="utf-8") as f:
+                          f.writelines(new_lines)
+
+              processed.append(item)
+
+          # 清空队列
+          data["queue"] = []
+          with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+              json.dump(data, f, indent=2, ensure_ascii=False)
+
+          print(f"队列处理完成，已处理 {len(processed)} 项。")
+          PYEOF
+
+            else
+              echo "队列为空，无需处理。"
+            fi
+          fi
+
+          # ─── 2. 清理超过 30 天的 recycle-bin 文件 ───
+          if [ -d "$RECYCLE_DIR" ]; then
+            echo "检查回收站中超过 ${RETENTION_DAYS} 天的文件..."
+            DELETED_COUNT=0
+
+            find "$RECYCLE_DIR" -type f -name "*.md" -mtime +${RETENTION_DAYS} -print0 | while IFS= read -r -d '' file; do
+              rm -f "$file"
+              echo "  已删除过期文件: $file"
+              DELETED_COUNT=$((DELETED_COUNT + 1))
+            done
+
+            # 清理空目录
+            find "$RECYCLE_DIR" -type d -empty -delete 2>/dev/null || true
+
+            echo "过期文件清理完成。"
+          else
+            echo "回收站目录不存在，跳过过期清理。"
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="${GITHUB_REF_NAME:-main}"
+
+          git add docs/_sidebar.md archive/delete-queue.json archive/recycle-bin/
+          git add -u archive/recycle-bin/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "[chore] cleanup recycle bin"
+
+          git status --short
+          git reset --hard HEAD
+          git fetch origin "$branch"
+          git rebase -X theirs "origin/$branch"
+          git push origin HEAD:"$branch"

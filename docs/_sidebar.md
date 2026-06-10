@@ -1,7 +1,7 @@
 * <a class="dpr-sidebar-root-link" href="#/">首页</a>
 * <a class="dpr-sidebar-root-link" href="#/papers/README">论文列表</a>
 * <a class="dpr-sidebar-root-link dpr-sidebar-noactive-link" href="javascript:void(0)" data-dpr-hash="#/tutorial/README">使用教程</a>
-* [论文列表](/papers/README)
+* <a class="dpr-sidebar-root-link" href="#/recycle-bin">回收站</a>
 * Latest Papers
   * 2026-06-09 <!--dpr-date:20260609-->
     * 速读区

@@ -8,6 +8,7 @@ window.$docsify = {
   // 始终使用根目录的 _sidebar.md，避免每个子目录都要放一份
   alias: {
     '/.*/_sidebar.md': '/_sidebar.md',
+    '/recycle-bin': '/recycle-bin/README',
   },
   // 只在侧边栏展示论文列表标题，不展示文内小节（例如 Abstract）
   subMaxLevel: 0,
@@ -2678,9 +2679,15 @@ window.$docsify = {
           if (li && li.classList) {
             li.classList.add('sidebar-paper-item');
           }
+          // 过滤已删除论文（回收站）
           const href = String(a.getAttribute('href') || '').trim();
           const routeMatch = href.match(/#\/(.+)$/);
           const routeId = routeMatch ? decodeURIComponent(routeMatch[1]).replace(/\/$/, '') : '';
+          if (window.DPRRecycleBin && routeId && window.DPRRecycleBin.isDeleted(routeId)) {
+            if (li) li.style.display = 'none';
+            a.dataset.sidebarStructuredHydrated = '1';
+            return;
+          }
           const arxivId = routeId ? routeId.split('/').slice(-1)[0] : '';
           const fallbackLink = arxivId ? `https://arxiv.org/abs/${arxivId}` : '';
 
@@ -4693,6 +4700,15 @@ window.$docsify = {
           return;
         }
 
+        // 回收站页面渲染
+        if (window.DPRRecycleBin && window.DPRRecycleBin.isRecycleBinRoute(file)) {
+          const container = document.getElementById('dpr-recycle-bin-page');
+          if (container && window.DPRRecycleBin.renderRecycleBinPage) {
+            window.DPRRecycleBin.renderRecycleBinPage(container);
+          }
+          return;
+        }
+
         // A. 对正文区域进行一次全局公式渲染（支持 $...$ / $$...$$）
         const mainContent = document.querySelector('.markdown-section');
         if (mainContent) {
@@ -4757,6 +4773,10 @@ window.$docsify = {
         setupCollapsibleSidebarByDay();
         setupCollapsibleConferenceSidebar();
         hydrateStructuredSidebarItems();
+        // 为侧边栏论文项绑定回收站右键菜单
+        if (window.DPRRecycleBin) {
+          window.DPRRecycleBin.bindContextMenu();
+        }
         bindSidebarVirtualHashLinks();
         neutralizeSidebarNoactiveLinks();
 
