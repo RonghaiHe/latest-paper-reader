@@ -4427,11 +4427,12 @@ window.$docsify = {
         if (meta.tags && meta.tags.length) {
           lines.push(`<p><strong>Tags</strong>: ${renderTags(meta.tags)}</p>`);
         }
-        if (meta.custom_tags && meta.custom_tags.length) {
-          const withRemove = meta.custom_tags.map(t =>
+        {
+          const customTags = Array.isArray(meta.custom_tags) ? meta.custom_tags : [];
+          const tagHtml = customTags.map(t =>
             `<span class="tag-label tag-custom">${escapeHtml(t)} <button class="tag-remove-btn" data-tag="${escapeHtml(t)}">×</button></span>`
           ).join(' ');
-          lines.push(`<p><strong>自定义标签</strong>: ${withRemove} <button class="tag-add-btn" id="custom-tag-add-btn" title="添加自定义标签">+</button></p>`);
+          lines.push(`<p><strong>自定义标签</strong>: ${tagHtml || '<span style="color:#999;font-size:12px;">暂无，点击 + 添加</span>'} <button class="tag-add-btn" id="custom-tag-add-btn" title="从预设标签中选择添加">+</button></p>`);
         }
         if (meta.score !== undefined && meta.score !== null) {
           lines.push(`<p><strong>Score</strong>: ${escapeHtml(String(meta.score))}</p>`);
