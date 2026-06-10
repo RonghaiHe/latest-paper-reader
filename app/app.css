@@ -2888,7 +2888,11 @@ article.markdown-section {
 .sidebar-nav a.dpr-sidebar-root-link,
 .sidebar-nav a.dpr-sidebar-root-link:link,
 .sidebar-nav a.dpr-sidebar-root-link:visited {
-  display: block;
+  display: block !important;
+  flex: none !important;
+  min-width: auto !important;
+  overflow: visible !important;
+  white-space: normal !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   padding-left: 0 !important;
@@ -7010,6 +7014,34 @@ body.dpr-paper-page.dpr-pdf-preview-open article.markdown-section {
 }
 .dpr-ctx-menu-item.danger:hover {
   background: #fdecea;
+}
+
+/* ─── 侧边栏论文删除按钮（hover 时显示） ─── */
+.sidebar-paper-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #999;
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  z-index: 2;
+  padding: 0;
+}
+.sidebar-paper-item:hover .sidebar-paper-delete-btn {
+  opacity: 1;
+}
+.sidebar-paper-delete-btn:hover {
+  background: #fdecea;
+  color: #e74c3c;
 }
 
 /* ─── 回收站页面 ─── */

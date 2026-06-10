@@ -2484,6 +2484,9 @@ window.$docsify = {
 
 	        const links = nav.querySelectorAll('a[href*="#/"]');
 	        links.forEach((a) => {
+            // 跳过侧边栏根链接（首页/论文列表/回收站等），避免被误标为论文条目
+            if (a.classList.contains('dpr-sidebar-root-link')) return;
+            if (a.classList.contains('dpr-sidebar-noactive-link')) return;
 	          const href = a.getAttribute('href') || '';
 	          const m = href.match(/#\/(.+)$/);
 	          if (!m) return;
@@ -2629,6 +2632,32 @@ window.$docsify = {
               actionWrapper.appendChild(orangeIcon);
 	            actionWrapper.appendChild(badIcon);
 	            a.parentNode.insertBefore(actionWrapper, a.nextSibling);
+
+              // 删除按钮（hover 时显示在右上角）
+              let deleteBtn = li.querySelector('.sidebar-paper-delete-btn');
+              if (!deleteBtn) {
+                deleteBtn = document.createElement('button');
+                deleteBtn.className = 'sidebar-paper-delete-btn';
+                deleteBtn.title = '移入回收站';
+                deleteBtn.setAttribute('aria-label', '删除论文');
+                deleteBtn.textContent = '\u00d7';
+                deleteBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (window.DPRRecycleBin) {
+                    let meta = {};
+                    const raw = a.getAttribute('data-sidebar-item') || '';
+                    if (raw) { try { meta = JSON.parse(raw); } catch { meta = {}; } }
+                    window.DPRRecycleBin.confirmDelete(paperIdFromHref, {
+                      title: meta.title || a.textContent || '',
+                      href: href,
+                      filePath: paperIdFromHref + '.md',
+                    });
+                  }
+                });
+                li.style.position = 'relative';
+                li.appendChild(deleteBtn);
+              }
 	          }
 
 	          // 无论按钮是否刚创建，都要基于“最新 state”刷新激活态（支持空格键切换）
@@ -4773,9 +4802,9 @@ window.$docsify = {
         setupCollapsibleSidebarByDay();
         setupCollapsibleConferenceSidebar();
         hydrateStructuredSidebarItems();
-        // 为侧边栏论文项绑定回收站右键菜单
+        // 为侧边栏论文项绑定回收站删除按钮
         if (window.DPRRecycleBin) {
-          window.DPRRecycleBin.bindContextMenu();
+          window.DPRRecycleBin.bindDeleteButtons();
         }
         bindSidebarVirtualHashLinks();
         neutralizeSidebarNoactiveLinks();

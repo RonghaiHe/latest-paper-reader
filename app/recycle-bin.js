@@ -325,66 +325,29 @@ window.DPRRecycleBin = (function () {
     }));
   };
 
-  // ─── 右键菜单 ───
+  // ─── 删除确认（供侧边栏删除按钮调用） ───
 
-  let activeMenu = null;
-
-  const hideContextMenu = () => {
-    if (activeMenu) {
-      activeMenu.remove();
-      activeMenu = null;
+  const confirmDelete = async (paperId, meta) => {
+    const title = (meta && meta.title) || paperId;
+    if (!confirm(`确定将「${title}」移入回收站？`)) return;
+    const result = await markDeleted(paperId, meta);
+    // 隐藏侧边栏中的对应项
+    const nav = document.querySelector('.sidebar-nav');
+    if (nav) {
+      const links = nav.querySelectorAll('a.dpr-sidebar-item-link');
+      links.forEach((a) => {
+        const href = a.getAttribute('href') || '';
+        if (href.includes(paperId)) {
+          const li = a.closest('li');
+          if (li) li.style.display = 'none';
+        }
+      });
     }
-    document.removeEventListener('click', hideContextMenu, true);
-    document.removeEventListener('contextmenu', hideContextMenu, true);
-  };
-
-  const showContextMenu = (event, paperId, meta) => {
-    event.preventDefault();
-    event.stopPropagation();
-    hideContextMenu();
-
-    const menu = document.createElement('div');
-    menu.className = 'dpr-ctx-menu';
-    menu.style.left = `${event.clientX}px`;
-    menu.style.top = `${event.clientY}px`;
-
-    const menuItem = document.createElement('div');
-    menuItem.className = 'dpr-ctx-menu-item danger';
-    menuItem.textContent = '删除论文';
-    menuItem.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      hideContextMenu();
-      const title = (meta && meta.title) || paperId;
-      if (!confirm(`确定将「${title}」移入回收站？`)) return;
-      const result = await markDeleted(paperId, meta);
-      // 隐藏侧边栏中的对应项
-      const nav = document.querySelector('.sidebar-nav');
-      if (nav) {
-        const links = nav.querySelectorAll('a.dpr-sidebar-item-link');
-        links.forEach((a) => {
-          const href = a.getAttribute('href') || '';
-          if (href.includes(paperId)) {
-            const li = a.closest('li');
-            if (li) li.style.display = 'none';
-          }
-        });
-      }
-      if (result.synced) {
-        console.log(`[DPR RecycleBin] 已将「${title}」移入回收站并同步到仓库。`);
-      } else {
-        console.log(`[DPR RecycleBin] 已将「${title}」移入回收站（仅本地）。`);
-      }
-    });
-
-    menu.appendChild(menuItem);
-    document.body.appendChild(menu);
-    activeMenu = menu;
-
-    // 点击其他地方关闭菜单
-    setTimeout(() => {
-      document.addEventListener('click', hideContextMenu, true);
-      document.addEventListener('contextmenu', hideContextMenu, true);
-    }, 0);
+    if (result.synced) {
+      console.log(`[DPR RecycleBin] 已将「${title}」移入回收站并同步到仓库。`);
+    } else {
+      console.log(`[DPR RecycleBin] 已将「${title}」移入回收站（仅本地）。`);
+    }
   };
 
   // ─── 回收站页面渲染 ───
@@ -575,34 +538,10 @@ window.DPRRecycleBin = (function () {
     }
   };
 
-  // ─── 初始化：为侧边栏论文项绑定右键菜单 ───
+  // ─── 初始化：预留接口（删除按钮已由 docsify-plugin.js 在 markSidebarReadState 中直接创建） ───
 
-  const bindContextMenu = () => {
-    const nav = document.querySelector('.sidebar-nav');
-    if (!nav) return;
-    const links = nav.querySelectorAll('a.dpr-sidebar-item-link.dpr-sidebar-item-structured');
-    links.forEach((a) => {
-      if (a.dataset.recycleBinBound === '1') return;
-      a.dataset.recycleBinBound = '1';
-      a.addEventListener('contextmenu', (e) => {
-        const li = a.closest('li');
-        if (li && li.style.display === 'none') return;
-        const href = String(a.getAttribute('href') || '').trim();
-        const routeMatch = href.match(/#\/(.+)$/);
-        const paperId = routeMatch ? decodeURIComponent(routeMatch[1]).replace(/\/$/, '') : '';
-        if (!paperId) return;
-        let meta = {};
-        const raw = a.getAttribute('data-sidebar-item') || '';
-        if (raw) {
-          try { meta = JSON.parse(raw); } catch { meta = {}; }
-        }
-        showContextMenu(e, paperId, {
-          title: meta.title || a.textContent || '',
-          href: href,
-          filePath: paperId + '.md',
-        });
-      });
-    });
+  const bindDeleteButtons = () => {
+    // 删除按钮已在 markSidebarReadState 中创建并绑定事件，此处无需额外操作
   };
 
   // ─── 回收站路由页面检测 ───
@@ -616,12 +555,11 @@ window.DPRRecycleBin = (function () {
   return {
     isDeleted,
     markDeleted,
+    confirmDelete,
     restore,
     getDeletedList,
-    showContextMenu,
-    hideContextMenu,
     renderRecycleBinPage,
-    bindContextMenu,
+    bindDeleteButtons,
     isRecycleBinRoute,
   };
 })();
