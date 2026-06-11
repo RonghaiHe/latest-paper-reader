@@ -137,8 +137,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="${GITHUB_REF_NAME:-main}"
 
-          git add docs/_sidebar.md archive/delete-queue.json archive/recycle-bin/
-          git add -u archive/recycle-bin/
+          git add docs/_sidebar.md archive/delete-queue.json
+          if [ -d "archive/recycle-bin" ]; then
+            git add archive/recycle-bin/
+            git add -u archive/recycle-bin/
+          fi
 
           if git diff --cached --quiet; then
             echo "No changes to commit."
