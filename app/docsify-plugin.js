@@ -4424,15 +4424,20 @@ window.$docsify = {
             `<p class="paper-meta-link-row"><span class="paper-meta-link-label"><strong>PDF</strong>:</span> <a class="paper-meta-link" href="${escapeHtml(meta.pdf)}" target="_blank">${escapeHtml(meta.pdf)}</a></p>`
           );
         }
-        if (meta.tags && meta.tags.length) {
-          lines.push(`<p><strong>Tags</strong>: ${renderTags(meta.tags)}</p>`);
-        }
         {
+          const parts = [];
+          if (meta.tags && meta.tags.length) {
+            parts.push(renderTags(meta.tags));
+          }
           const customTags = Array.isArray(meta.custom_tags) ? meta.custom_tags : [];
-          const tagHtml = customTags.map(t =>
-            `<span class="tag-label tag-custom">${escapeHtml(t)} <button class="tag-remove-btn" data-tag="${escapeHtml(t)}">×</button></span>`
-          ).join(' ');
-          lines.push(`<p><strong>自定义标签</strong>: ${tagHtml || '<span style="color:#999;font-size:12px;">暂无，点击 + 添加</span>'} <button class="tag-add-btn" id="custom-tag-add-btn" title="从预设标签中选择添加">+</button></p>`);
+          customTags.forEach(t => {
+            parts.push(
+              `<span class="tag-label tag-custom">${escapeHtml(t)} <button class="tag-remove-btn" data-tag="${escapeHtml(t)}">×</button></span>`
+            );
+          });
+          const tagsHtml = parts.join(' ');
+          const addBtn = `<button class="tag-add-btn" id="custom-tag-add-btn" title="从预设标签中选择添加">+</button>`;
+          lines.push(`<p><strong>Tags</strong>: ${tagsHtml || ''} ${addBtn}</p>`);
         }
         if (meta.score !== undefined && meta.score !== null) {
           lines.push(`<p><strong>Score</strong>: ${escapeHtml(String(meta.score))}</p>`);
