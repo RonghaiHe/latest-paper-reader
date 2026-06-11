@@ -1,0 +1,101 @@
+name: Process arXiv Issue
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  process:
+    # Only trigger on issue comments (not PR comments)
+    # Only when the comment body starts with /skim
+    # Only when the commenter is the issue author
+    if: |
+      github.event.issue.pull_request == null &&
+      startsWith(github.event.comment.body, '/skim') &&
+      github.event.comment.user.login == github.event.issue.user.login
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+          uv pip install --system -r requirements.txt
+
+      - name: Extract arXiv ID from issue title
+        id: extract
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        shell: bash
+        run: |
+          # Extract arXiv ID from title format: [arXiv:2401.12345] Paper Title
+          arxiv_id=$(echo "$ISSUE_TITLE" | grep -oP '\[arXiv:\K\d{4}\.\d{4,5}(?=\])' | head -1)
+          if [ -z "$arxiv_id" ]; then
+            echo "arxiv_id=" >> "$GITHUB_OUTPUT"
+            echo "::error::Could not extract arXiv ID from issue title. Expected format: [arXiv:2401.12345] Paper Title"
+            exit 1
+          fi
+          echo "arxiv_id=$arxiv_id" >> "$GITHUB_OUTPUT"
+          echo "Extracted arXiv ID: $arxiv_id"
+
+      - name: Run processor
+        id: process
+        if: steps.extract.outputs.arxiv_id != ''
+        continue-on-error: true
+        run: |
+          python src/issue_arxiv_processor.py --arxiv-id "${{ steps.extract.outputs.arxiv_id }}"
+
+      - name: Commit results
+        if: steps.extract.outputs.arxiv_id != '' && steps.process.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          branch="${GITHUB_REF_NAME:-main}"
+
+          git add docs/
+          git add -u archive/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "[chore] add paper from issue #${{ github.event.issue.number }}"
+
+          git fetch origin "$branch"
+          git rebase -X theirs "origin/$branch"
+          git push origin HEAD:"$branch"
+
+      - name: Close issue on success
+        if: steps.extract.outputs.arxiv_id != '' && steps.process.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ARXIV_ID: ${{ steps.extract.outputs.arxiv_id }}
+        run: |
+          gh issue close "$ISSUE_NUMBER" \
+            --comment "✅ Paper \`${ARXIV_ID}\` has been added to the 速读区. You can view it on the [latest papers page](https://ronghaihe.github.io/latest-paper-reader/)."
+
+      - name: Report failure
+        if: steps.extract.outputs.arxiv_id != '' && steps.process.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "❌ Failed to process the paper. Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
