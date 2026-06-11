@@ -746,9 +746,7 @@ window.SubscriptionsManager = (function () {
   };
 
   const _encodeContentLocal = (text) => {
-    const bytes = new TextEncoder().encode(text);
-    const bin = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-    return btoa(bin);
+    return btoa(text);
   };
 
   const loadCustomTagsFromConfig = async () => {

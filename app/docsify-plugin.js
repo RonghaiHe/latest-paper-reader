@@ -4566,9 +4566,7 @@ window.$docsify = {
         });
       };
       const _encodeContent = (text) => {
-        const bytes = new TextEncoder().encode(text);
-        const bin = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
-        return btoa(bin);
+        return btoa(text);
       };
       const _resolveRepoCtx = async (token) => {
         const url = window.location.href || '';
