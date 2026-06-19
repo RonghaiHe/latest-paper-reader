@@ -887,16 +887,60 @@ window.$docsify = {
           console.error('Zotero meta update failed:', e);
         });
 
+      // 公共工具：保护 LaTeX 公式不被 marked 破坏
+      // 在 beforeEach 阶段调用，将公式包裹成 HTML 标签（marked 不解析 HTML）
+      const protectLatex = (text) => {
+        if (!text) return text;
+        // 1) 将 \[...\] 转为 $$...$$，\(...\) 转为 $...$
+        //    注意：\[ 可能在行首也可能在行内
+        text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`);
+        text = text.replace(/\\\((.*?)\\\)/g, (_, inner) => `$${inner}$`);
+        // 2) 保护块级公式 $$...$$ → <div class="dpr-math" data-display="true">
+        text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
+          const escaped = inner.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<div class="dpr-math" data-display="true">${escaped}</div>`;
+        });
+        // 3) 保护行内公式 $...$ → <span class="dpr-math" data-display="false">
+        //    不跨行，排除 $ 后紧跟空格或 $ 前紧跟空格的情况（减少误匹配）
+        text = text.replace(/\$([^\$\n]+?)\$/g, (match, inner) => {
+          // 排除明显不是公式的情况（如 $10 这种价格）
+          if (/^\d+$/.test(inner.trim())) return match;
+          const escaped = inner.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<span class="dpr-math" data-display="false">${escaped}</span>`;
+        });
+        return text;
+      };
+
       // 公共工具：在指定元素上渲染公式
       const renderMathInEl = (el) => {
-        if (!window.renderMathInElement || !el) return;
-        window.renderMathInElement(el, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-          ],
-          throwOnError: false,
-        });
+        if (!el) return;
+        // 优先渲染 protectLatex 产生的 .dpr-math 标签
+        if (window.katex) {
+          el.querySelectorAll('.dpr-math').forEach((node) => {
+            const latex = node.textContent;
+            const displayMode = node.getAttribute('data-display') === 'true';
+            try {
+              window.katex.render(latex, node, {
+                displayMode,
+                throwOnError: false,
+              });
+            } catch (e) {
+              // 渲染失败保留原文
+            }
+          });
+        }
+        // 兜底：对纯文本中残留的 $...$ / $$...$$ 用 auto-render 处理
+        if (window.renderMathInElement) {
+          window.renderMathInElement(el, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\[', right: '\\]', display: true },
+              { left: '\\(', right: '\\)', display: false },
+            ],
+            throwOnError: false,
+          });
+        }
       };
 
       // 公共工具：简单表格 + 标记修正：
@@ -947,6 +991,10 @@ window.$docsify = {
         // 保护 LaTeX 公式：先用占位符替换，渲染后再恢复
         const latexBlocks = [];
         let protectedText = text;
+
+        // 先将 \[...\] → $$...$$ 和 \(...\) → $...$
+        protectedText = protectedText.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => `$$${inner}$$`);
+        protectedText = protectedText.replace(/\\\((.*?)\\\)/g, (_, inner) => `$${inner}$`);
 
         // 保护块级公式 $$...$$
         protectedText = protectedText.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
@@ -4508,8 +4556,9 @@ window.$docsify = {
         }
 
         // 生成论文页面 HTML + 正文
+        // ★ 保护正文中的 LaTeX 公式不被 marked 破坏
         const paperHtml = renderPaperFromMeta(meta);
-        return paperHtml + body;
+        return paperHtml + protectLatex(body);
       });
 
       const refreshDeferredPageEnhancements = () => {
