@@ -2531,9 +2531,9 @@ window.$docsify = {
         if (!nav) return;
         const state = loadReadState();
 
+        let badgeCount = 0;
+
         // 找到所有一级和二级分组（Conference/Daily 下的日期或会议名）
-        // Docsify 渲染后结构：ul > li > p/a + ul > li > p/a + ul > li > a(论文)
-        // 我们给包含论文链接的每个「分组 li」加 badge
         nav.querySelectorAll('li').forEach((li) => {
           // 跳过叶子节点（论文条目本身）
           const childUl = li.querySelector('ul');
@@ -2556,8 +2556,25 @@ window.$docsify = {
 
           const unread = total - readCount;
 
-          // 找到该 li 的标题元素（第一个 p 或 a）
-          const titleEl = li.querySelector(':scope > p, :scope > a');
+          // 找到该 li 的标题元素：尝试多种选择器
+          let titleEl = li.querySelector(':scope > p')
+            || li.querySelector(':scope > a')
+            || li.querySelector(':scope > strong');
+
+          // docsify 可能把分组头渲染为直接文本节点，没有包裹标签
+          // 这种情况需要创建一个包裹 span
+          if (!titleEl) {
+            // 检查 li 的第一个子节点是否是文本
+            const firstNode = li.childNodes[0];
+            if (firstNode && firstNode.nodeType === 3 && firstNode.textContent.trim()) {
+              const wrapper = document.createElement('span');
+              wrapper.className = 'dpr-sidebar-group-title';
+              wrapper.textContent = firstNode.textContent;
+              li.replaceChild(wrapper, firstNode);
+              titleEl = wrapper;
+            }
+          }
+
           if (!titleEl) return;
 
           // 找到或创建 badge
@@ -2569,7 +2586,12 @@ window.$docsify = {
           }
           badge.textContent = unread > 0 ? String(unread) : '';
           badge.setAttribute('data-count', String(unread));
+          if (unread > 0) badgeCount++;
         });
+
+        if (badgeCount === 0) {
+          console.debug('[DPR] updateSidebarUnreadBadges: no badges added (0 groups with unread)');
+        }
       };
 
 	      const markSidebarReadState = (currentPaperId) => {
