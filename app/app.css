@@ -417,6 +417,28 @@ html {
   display: none !important;
 }
 
+/* Sidebar 未读 badge */
+.dpr-unread-badge {
+  background: #e53e3e;
+  color: #fff;
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  margin-left: 5px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
+}
+.dpr-unread-badge:empty,
+.dpr-unread-badge[data-count="0"] {
+  display: none;
+}
+
 /* LaTeX 公式保护标签：在 KaTeX 渲染前以代码样式展示，渲染后自动覆盖 */
 .dpr-math[data-display="true"] {
   display: block;
