@@ -25,4 +25,7 @@ subscriptions:
   intent_profiles: []
 llm:
   default_model: glm/glm-4.7-flash
+user_custom_tags:
+  - name: "optimization"
+    description: "Ã¤Â¼ÂÃ¥ÂÂÃ§ÂÂÃ¨Â®ÂºÃ£ÂÂÃ§Â®ÂÃ¦Â³Â"
 source_backends: {}
