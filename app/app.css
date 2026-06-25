@@ -417,17 +417,6 @@ html {
   display: none !important;
 }
 
-/* LaTeX 公式保护标签：在 KaTeX 渲染前以代码样式展示，渲染后自动覆盖 */
-.dpr-math[data-display="true"] {
-  display: block;
-  text-align: center;
-  margin: 1em 0;
-  overflow-x: auto;
-}
-.dpr-math[data-display="false"] {
-  display: inline;
-}
-
 /* 公共研讨区容器 */
 #paper-chat-container {
   margin-top: 40px;
