@@ -2160,10 +2160,6 @@ window.$docsify = {
       const READ_STORAGE_KEY = 'dpr_read_papers_v1';
 
       const loadReadState = () => {
-        // 认证用户优先从 Supabase 缓存读取
-        if (window.DPRReadStateSync && window.DPRReadStateSync.isActive()) {
-          return window.DPRReadStateSync.getAll();
-        }
         try {
           if (!window.localStorage) return {};
           const raw = window.localStorage.getItem(READ_STORAGE_KEY);
@@ -2188,36 +2184,11 @@ window.$docsify = {
       };
 
       const saveReadState = (state) => {
-        // localStorage 始终保存（离线回退）
         try {
-          if (window.localStorage) {
-            window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(state));
-          }
+          if (!window.localStorage) return;
+          window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(state));
         } catch {
           // ignore
-        }
-      };
-
-      const markPaperRead = (paperId, status) => {
-        if (!paperId) return;
-        const st = status || 'read';
-        // 写 localStorage
-        const state = loadReadState();
-        state[paperId] = st;
-        saveReadState(state);
-        // 同步到 Supabase
-        if (window.DPRReadStateSync && window.DPRReadStateSync.isActive()) {
-          window.DPRReadStateSync.markRead(paperId, st);
-        }
-      };
-
-      const clearPaperRead = (paperId) => {
-        if (!paperId) return;
-        const state = loadReadState();
-        delete state[paperId];
-        saveReadState(state);
-        if (window.DPRReadStateSync && window.DPRReadStateSync.isActive()) {
-          window.DPRReadStateSync.clearRead(paperId);
         }
       };
 
@@ -2532,9 +2503,9 @@ window.$docsify = {
 	        const state = loadReadState();
         if (currentPaperId) {
           if (!state[currentPaperId]) {
-            markPaperRead(currentPaperId, 'read');
             state[currentPaperId] = 'read';
           }
+          saveReadState(state);
         }
 
         const applyLiState = (li, paperIdFromHref) => {
@@ -2750,9 +2721,6 @@ window.$docsify = {
 
 	          applyLiState(li, paperIdFromHref);
 	        });
-
-          // 更新分组未读 badge
-          updateSidebarUnreadBadges();
 	      };
 
       const scoreToStarRating = (scoreValue) => {
@@ -4970,92 +4938,6 @@ window.$docsify = {
         const clamped = Math.max(0, Math.min(10, s));
         const stars = Math.round(clamped / 2 * 2) / 2;
         return `${stars.toFixed(1)}/5`;
-      // --- 阅读状态同步初始化 ---
-      // 用户解锁密钥后（mode=full），用 GitHub Token 获取用户名，初始化 Supabase 同步
-      const initReadStateSync = async () => {
-        try {
-          if (window.DPR_ACCESS_MODE !== 'full') return;
-          if (!window.DPRReadStateSync) return;
-          const secret = window.decoded_secret_private || {};
-          const token = (secret.github && secret.github.token) || '';
-          if (!token) return;
-          // 获取 GitHub 用户名
-          const resp = await fetch('https://api.github.com/user', {
-            headers: { Authorization: 'Bearer ' + token },
-          });
-          if (!resp.ok) return;
-          const user = await resp.json();
-          const username = (user && user.login) || '';
-          if (!username) return;
-          // 读取 Supabase 配置
-          const supabaseUrl = (window.$docsify && window.$docsify.supabaseUrl)
-            || (window.jsyaml ? '' : '')
-            || 'https://lyucdwgefyfbmaiopjbk.supabase.co';
-          const anonKey = 'sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq';
-          await window.DPRReadStateSync.init(supabaseUrl, anonKey, username);
-          // 迁移 localStorage 已有数据
-          const localState = (() => {
-            try {
-              const raw = window.localStorage.getItem(READ_STORAGE_KEY);
-              return raw ? JSON.parse(raw) : null;
-            } catch { return null; }
-          })();
-          if (localState && Object.keys(localState).length) {
-            window.DPRReadStateSync.migrateFromLocalStorage(localState);
-          }
-          // 重新渲染 sidebar 状态
-          updateSidebarUnreadBadges();
-          markSidebarReadState(null);
-        } catch (e) {
-          console.warn('[DPR] ReadState init error:', e);
-        }
-      };
-      document.addEventListener('dpr-access-mode-changed', (e) => {
-        const mode = e && e.detail && e.detail.mode;
-        if (mode === 'full') initReadStateSync();
-      });
-
-      // --- Sidebar 未读 badge 更新 ---
-      const updateSidebarUnreadBadges = () => {
-        const nav = document.querySelector('.sidebar-nav');
-        if (!nav) return;
-        const state = loadReadState();
-
-        // 处理日期分组和会议分组的所有可折叠节
-        nav.querySelectorAll('li').forEach((li) => {
-          // 只处理包含子列表的 li（即分组头）
-          const subUl = li.querySelector(':scope > ul');
-          if (!subUl) return;
-
-          // 收集该分组下所有论文链接
-          const paperLinks = subUl.querySelectorAll('a[href*="#/"]');
-          if (!paperLinks.length) return;
-
-          var total = 0;
-          var readCount = 0;
-          paperLinks.forEach((a) => {
-            const href = a.getAttribute('href') || '';
-            const m = href.match(/#\/(.+)$/);
-            if (!m) return;
-            const paperId = m[1].replace(/\/$/, '');
-            total++;
-            if (state[paperId]) readCount++;
-          });
-
-          var unread = total - readCount;
-
-          // 找到或创建 badge
-          const firstChild = li.querySelector(':scope > a, :scope > p');
-          if (!firstChild) return;
-          var badge = firstChild.querySelector('.dpr-unread-badge');
-          if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'dpr-unread-badge';
-            firstChild.appendChild(badge);
-          }
-          badge.textContent = unread > 0 ? String(unread) : '';
-          badge.setAttribute('data-count', String(unread));
-        });
       };
 
       // --- Docsify 生命周期钩子 ---
