@@ -2531,20 +2531,18 @@ window.$docsify = {
         if (!nav) return;
         const state = loadReadState();
 
-        // 找到所有一级和二级分组（Conference/Daily 下的日期或会议名）
-        // Docsify 渲染后结构：ul > li > p/a + ul > li > p/a + ul > li > a(论文)
-        // 我们给包含论文链接的每个「分组 li」加 badge
+        // 处理日期分组和会议分组的所有可折叠节
         nav.querySelectorAll('li').forEach((li) => {
-          // 跳过叶子节点（论文条目本身）
-          const childUl = li.querySelector('ul');
-          if (!childUl) return;
+          // 只处理包含子列表的 li（即分组头）
+          const subUl = li.querySelector(':scope > ul');
+          if (!subUl) return;
 
-          // 收集该 li 下所有论文链接（递归所有后代）
-          const paperLinks = li.querySelectorAll('a.dpr-sidebar-item-link[href*="#/"]');
+          // 收集该分组下所有论文链接
+          const paperLinks = subUl.querySelectorAll('a[href*="#/"]');
           if (!paperLinks.length) return;
 
-          let total = 0;
-          let readCount = 0;
+          var total = 0;
+          var readCount = 0;
           paperLinks.forEach((a) => {
             const href = a.getAttribute('href') || '';
             const m = href.match(/#\/(.+)$/);
@@ -2554,18 +2552,16 @@ window.$docsify = {
             if (state[paperId]) readCount++;
           });
 
-          const unread = total - readCount;
-
-          // 找到该 li 的标题元素（第一个 p 或 a）
-          const titleEl = li.querySelector(':scope > p, :scope > a');
-          if (!titleEl) return;
+          var unread = total - readCount;
 
           // 找到或创建 badge
-          let badge = titleEl.querySelector('.dpr-unread-badge');
+          const firstChild = li.querySelector(':scope > a, :scope > p');
+          if (!firstChild) return;
+          var badge = firstChild.querySelector('.dpr-unread-badge');
           if (!badge) {
             badge = document.createElement('span');
             badge.className = 'dpr-unread-badge';
-            titleEl.appendChild(badge);
+            firstChild.appendChild(badge);
           }
           badge.textContent = unread > 0 ? String(unread) : '';
           badge.setAttribute('data-count', String(unread));
