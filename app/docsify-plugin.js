@@ -2525,49 +2525,6 @@ window.$docsify = {
         showShareModal(url, preview ? `精美预览：${preview}` : '');
       };
 
-      // --- Sidebar 未读 badge 更新 ---
-      const updateSidebarUnreadBadges = () => {
-        const nav = document.querySelector('.sidebar-nav');
-        if (!nav) return;
-        const state = loadReadState();
-
-        // 处理日期分组和会议分组的所有可折叠节
-        nav.querySelectorAll('li').forEach((li) => {
-          // 只处理包含子列表的 li（即分组头）
-          const subUl = li.querySelector(':scope > ul');
-          if (!subUl) return;
-
-          // 收集该分组下所有论文链接
-          const paperLinks = subUl.querySelectorAll('a[href*="#/"]');
-          if (!paperLinks.length) return;
-
-          var total = 0;
-          var readCount = 0;
-          paperLinks.forEach((a) => {
-            const href = a.getAttribute('href') || '';
-            const m = href.match(/#\/(.+)$/);
-            if (!m) return;
-            const paperId = m[1].replace(/\/$/, '');
-            total++;
-            if (state[paperId]) readCount++;
-          });
-
-          var unread = total - readCount;
-
-          // 找到或创建 badge
-          const firstChild = li.querySelector(':scope > a, :scope > p');
-          if (!firstChild) return;
-          var badge = firstChild.querySelector('.dpr-unread-badge');
-          if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'dpr-unread-badge';
-            firstChild.appendChild(badge);
-          }
-          badge.textContent = unread > 0 ? String(unread) : '';
-          badge.setAttribute('data-count', String(unread));
-        });
-      };
-
 	      const markSidebarReadState = (currentPaperId) => {
 	        const nav = document.querySelector('.sidebar-nav');
 	        if (!nav) return;
@@ -5057,6 +5014,49 @@ window.$docsify = {
         const mode = e && e.detail && e.detail.mode;
         if (mode === 'full') initReadStateSync();
       });
+
+      // --- Sidebar 未读 badge 更新 ---
+      const updateSidebarUnreadBadges = () => {
+        const nav = document.querySelector('.sidebar-nav');
+        if (!nav) return;
+        const state = loadReadState();
+
+        // 处理日期分组和会议分组的所有可折叠节
+        nav.querySelectorAll('li').forEach((li) => {
+          // 只处理包含子列表的 li（即分组头）
+          const subUl = li.querySelector(':scope > ul');
+          if (!subUl) return;
+
+          // 收集该分组下所有论文链接
+          const paperLinks = subUl.querySelectorAll('a[href*="#/"]');
+          if (!paperLinks.length) return;
+
+          var total = 0;
+          var readCount = 0;
+          paperLinks.forEach((a) => {
+            const href = a.getAttribute('href') || '';
+            const m = href.match(/#\/(.+)$/);
+            if (!m) return;
+            const paperId = m[1].replace(/\/$/, '');
+            total++;
+            if (state[paperId]) readCount++;
+          });
+
+          var unread = total - readCount;
+
+          // 找到或创建 badge
+          const firstChild = li.querySelector(':scope > a, :scope > p');
+          if (!firstChild) return;
+          var badge = firstChild.querySelector('.dpr-unread-badge');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'dpr-unread-badge';
+            firstChild.appendChild(badge);
+          }
+          badge.textContent = unread > 0 ? String(unread) : '';
+          badge.setAttribute('data-count', String(unread));
+        });
+      };
 
       // --- Docsify 生命周期钩子 ---
       hook.doneEach(function () {
