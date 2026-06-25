@@ -2559,9 +2559,7 @@ window.$docsify = {
           // 找到该 li 的标题元素：尝试多种选择器
           let titleEl = li.querySelector(':scope > p')
             || li.querySelector(':scope > a')
-            || li.querySelector(':scope > div')
-            || li.querySelector(':scope > strong')
-            || li.querySelector(':scope > span');
+            || li.querySelector(':scope > strong');
 
           // docsify 可能把分组头渲染为直接文本节点，没有包裹标签
           // 这种情况需要创建一个包裹 span
